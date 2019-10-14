@@ -13,8 +13,10 @@ using namespace std;
 class Triangulation {
   static map<string, Point> roots;
   static vector<Distance> distances;
+  static  int measure_power; //potenza misurata a un metro di distanza
+  static float constant_envir; //constante ambientale(da 2 a 4)
 public:
-  //Triangulation(map<std::string, Point>);
+  Triangulation();
   static void initTriang(map<string, Point> vector_dati);
   static Point triangolate(vector<schema_original>, int);
   static float rssi2meter(int rssi);
