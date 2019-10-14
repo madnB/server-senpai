@@ -19,11 +19,11 @@ public:
     ~MainWindow();
 
 public slots:
-    void closing();
+    void closing();    
 
 private:
     void MqttStart();
-    void DB();
+    void DB();    
     Ui::MainWindow *ui;
 };
 #endif // MAINWINDOW_H
