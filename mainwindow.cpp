@@ -111,8 +111,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     QLabel* dateLabel = new QLabel(dateText);
 
-    connect(dateEdit, &QDateTimeEdit::dateTimeChanged, dateLabel, SLOT(&QLabel::setText(dateEdit->date().toString("d/M/yyyy"))));
-
     // Create your time series
     QBarSet *set0 = new QBarSet("Private MAC");
     QBarSet *set1 = new QBarSet("Public MAC");
@@ -146,6 +144,44 @@ MainWindow::MainWindow(QWidget *parent)
     // Create your chart view
     QChartView *chartViewBar = new QChartView(chartBar);
     chartViewBar->setRenderHint(QPainter::Antialiasing);
+
+    connect(dateEdit, &QDateTimeEdit::dateTimeChanged, this, [dateLabel, chartViewBar] (QDateTime temp){
+        QString dateText = QString("Date selected: %1").arg(temp.toString("d/M/yyyy"));
+        dateLabel->setText(dateText);
+        QBarSet *set0 = new QBarSet("Private MAC");
+        QBarSet *set1 = new QBarSet("Public MAC");
+
+        *set0 << 1 << 2 << 3 << 4 << 5 << 6;
+        *set1 << 5 << 0 << 0 << 4 << 0 << 7;
+
+        QStackedBarSeries *seriesBar = new QStackedBarSeries();
+        seriesBar->append(set0);
+        seriesBar->append(set1);
+
+        // Configure your chart
+        QChart *chartBar = new QChart();
+        chartBar->addSeries(seriesBar);
+        chartBar->setTitle("Number of devices tracked");
+        chartBar->setAnimationOptions(QChart::SeriesAnimations);
+
+        QStringList categories;
+        categories << "Jan" << "Feb" << "Mar" << "Apr" << "May" << "Jun";
+        QBarCategoryAxis *axisX = new QBarCategoryAxis();
+        axisX->append(categories);
+        chartBar->addAxis(axisX, Qt::AlignBottom);
+        seriesBar->attachAxis(axisX);
+        QValueAxis *axisY = new QValueAxis();
+        chartBar->addAxis(axisY, Qt::AlignLeft);
+        seriesBar->attachAxis(axisY);
+
+        chartBar->legend()->setVisible(true);
+        chartBar->legend()->setAlignment(Qt::AlignBottom);
+
+        chartViewBar->setChart(chartBar);
+        chartViewBar->setRenderHint(QPainter::Antialiasing);
+
+
+    });
 
 
 
