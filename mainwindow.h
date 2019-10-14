@@ -22,6 +22,7 @@ public slots:
     void closing();
 
 private:
+    Triangulation triang;
     void MqttStart();
     void DB();
     Ui::MainWindow *ui;
