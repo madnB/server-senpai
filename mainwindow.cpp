@@ -30,6 +30,7 @@ void MainWindow::closing(){
     this->mqtt.kill();
 }
 
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
@@ -65,6 +66,12 @@ MainWindow::MainWindow(QWidget *parent)
     //---------------------
 
     ui->setupUi(this);
+
+
+    // MAP TAB
+
+
+
     // Create your time series
     QScatterSeries *seriesScatter = new QScatterSeries();
     seriesScatter->setName("scatter");
@@ -86,30 +93,41 @@ MainWindow::MainWindow(QWidget *parent)
     graphicsViewScatter->setRenderHint(QPainter::Antialiasing);
 
 
+
+
+    //STATS TAB
+
+
+
+    // Create time and date picker
+
+    QDateTimeEdit *dateEdit = new QDateTimeEdit(QDate::currentDate());
+    dateEdit->setMaximumDate(QDate::currentDate());
+    dateEdit->setDisplayFormat("yyyy.MM.dd hh:mm");
+
+    QLabel *formatLabel = new QLabel(tr("Pick finish time"));
+
+    QString dateText = QString("Date selected: %1").arg(dateEdit->date().toString("d/M/yyyy"));
+
+    QLabel* dateLabel = new QLabel(dateText);
+
+    connect(dateEdit, &QDateTimeEdit::dateTimeChanged, dateLabel, SLOT(&QLabel::setText(dateEdit->date().toString("d/M/yyyy"))));
+
     // Create your time series
-    QBarSet *set0 = new QBarSet("Jane");
-    QBarSet *set1 = new QBarSet("John");
-    QBarSet *set2 = new QBarSet("Axel");
-    QBarSet *set3 = new QBarSet("Mary");
-    QBarSet *set4 = new QBarSet("Samantha");
+    QBarSet *set0 = new QBarSet("Private MAC");
+    QBarSet *set1 = new QBarSet("Public MAC");
 
     *set0 << 1 << 2 << 3 << 4 << 5 << 6;
     *set1 << 5 << 0 << 0 << 4 << 0 << 7;
-    *set2 << 3 << 5 << 8 << 13 << 8 << 5;
-    *set3 << 5 << 6 << 7 << 3 << 4 << 5;
-    *set4 << 9 << 7 << 5 << 3 << 1 << 2;
 
     QStackedBarSeries *seriesBar = new QStackedBarSeries();
     seriesBar->append(set0);
     seriesBar->append(set1);
-    seriesBar->append(set2);
-    seriesBar->append(set3);
-    seriesBar->append(set4);
 
     // Configure your chart
     QChart *chartBar = new QChart();
     chartBar->addSeries(seriesBar);
-    chartBar->setTitle("Simple stackedbarchart example");
+    chartBar->setTitle("Number of devices tracked");
     chartBar->setAnimationOptions(QChart::SeriesAnimations);
 
     QStringList categories;
@@ -130,9 +148,19 @@ MainWindow::MainWindow(QWidget *parent)
     chartViewBar->setRenderHint(QPainter::Antialiasing);
 
 
+
+
+    QVBoxLayout *statsLayout = new QVBoxLayout;
+    statsLayout->addWidget(formatLabel);
+    statsLayout->addWidget(dateEdit);
+    statsLayout->addWidget(chartViewBar);
+    statsLayout->addWidget(dateLabel);
+    QWidget *statsWidget = new QWidget;
+    statsWidget->setLayout(statsLayout);
+
     auto tw = new QTabWidget (this);
     tw->addTab(graphicsViewScatter, "Map");
-    tw->addTab(chartViewBar, "Stats");
+    tw->addTab(statsWidget, "Stats");
     tw->addTab(new QWidget, "third");
 
     setCentralWidget(tw);
