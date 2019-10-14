@@ -19,7 +19,7 @@ class Column {
 
 class Distance {
    public:
-    Distance(float, string, string)
+    Distance(float distance, string mac1, string mac2)
     {
         this->distance = distance;
         this->mac1 = mac1;

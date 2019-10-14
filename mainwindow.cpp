@@ -6,24 +6,24 @@
 #include <atltime.h>
 #include <ctime>
 
+
 void MainWindow::MqttStart(){
     QString program = "python mqtt.py";
     qDebug() << "Start python";
     this->mqtt.startDetached(program);
-    this->mqtt.
+    //this->mqtt.
 }
 
-void MainWindow::DB(){
+/*void MainWindow::DB(){
     qDebug() << "Running DB";
-    Db_original db;
 
-    db.loop(CTime(2019, 10, 4, 13, 30, 00).GetTime());
+
     db.number_of_rilevations(CTime(2019, 10, 1, 19, 00, 0).GetTime(), CTime(2019, 10, 1, 19, 30, 0).GetTime());
     db.last_positions(CTime(2019, 10, 1, 19, 01, 0).GetTime());
     db.statistics_fun(CTime(2019, 10, 1, 19, 00, 0).GetTime(), 1);
 }
 
-
+*/
 void MainWindow::closing(){
     qDebug() << "Kill Process...";
     this->timer->stop();
@@ -36,20 +36,28 @@ MainWindow::MainWindow(QWidget *parent)
 {
     this->timer = new QTimer(this);
 
-    // TODO - read configuration
-    Point root1(0.0, 0.0), root2(5.0,0.0), root3(0.0,5.0);
-    pair<string,Point> a("a",root1),b("a",root2),c("a",root3);
-    map<string, Point> roots = { a,b,c };
 
-    // Init triangulation
-    Triangulation::initTriang(roots);
 
     // Start MQTT
     MqttStart();
 
     // Start DB
-    this->timer->setInterval(30*1000);
-    connect(this->timer, &QTimer::timeout,this, &MainWindow::DB);
+    Db_original db;
+    db.triang=Triangulation();
+    // Init triangulation
+    // TODO - read configuration
+    Point root1(0.0, 0.0), root2(0.8,0.0); //root3(0.0,5.0);
+    pair<string,Point> a("30:AE:A4:1D:52:BC",root1),b("30:AE:A4:75:23:E8",root2);//,c("a",root3);
+    map<string, Point> roots = { a,b};
+
+    db.triang.initTriang(roots);
+
+    int n_sec=1;
+    this->timer->setInterval(n_sec*1000);
+    connect(this->timer, &QTimer::timeout,this, []() {
+        Db_original db;
+        db.triang=Triangulation();
+        db.loop(CTime(2019, 10, 4, 13, 30, 00).GetTime());});
     this->timer->start();
 
     //---------------------

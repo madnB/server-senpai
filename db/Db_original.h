@@ -9,6 +9,7 @@
 #include "schema/schema_triang.h"
 #include "statistics.h"
 #include "best_k_mac.h"
+#include "triangulation.h"
 using namespace std;
 
 class Db_original {
@@ -17,6 +18,7 @@ class Db_original {
     static map<mac_time, set<schema_original>> dati_scheda;
 	static vector<schema_triang> last_positions_ril;
 	sqlite3 *db;
+
 	static int callback(void *data, int argc, char **argv, char **azColName);
 	static int callback_count_ril_pub(void *data, int argc, char **argv, char **azColName);
 	static int callback_count_ril_no_pub(void *data, int argc, char **argv, char **azColName);
@@ -24,9 +26,9 @@ class Db_original {
 	static int callback_statistics(void *data, int argc, char **argv, char **azColName);
 
 public:
-	
+    Triangulation triang;
 	Db_original();
-	void loop(time_t timestamp);
+    void loop(time_t timestamp);
 	map<string,int*> number_of_rilevations(time_t timestamp_start, time_t timestamp_end);
 	vector<schema_triang> last_positions(time_t timestamp);
 	best_k_mac statistics_fun(time_t timestamp_start, int mode);
