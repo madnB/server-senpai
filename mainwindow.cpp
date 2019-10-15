@@ -133,17 +133,22 @@ MainWindow::MainWindow(QWidget *parent)
     // Create your time series
     QScatterSeries *boardScatter = new QScatterSeries();
     boardScatter->setName("Boards");
-    boardScatter->setPointLabelsVisible(true);
+    boardScatter->setPointLabelsVisible(false);
+    connect(boardScatter,&QXYSeries::hovered,this,[boardScatter] (const QPointF &waste, bool check) {
+        if(check == true){
+            boardScatter->setPointLabelsVisible(true);
+        }
+        else {
+            boardScatter->setPointLabelsVisible(false);
+        }
+
+    });
     boardScatter->setMarkerShape(QScatterSeries::MarkerShapeRectangle);
-    boardScatter->setMarkerSize(10.0);
+    boardScatter->setMarkerSize(15.0);
 
     *boardScatter<<QPointF(3,4);
 
-    QScatterSeries *phoneScatter = new QScatterSeries();
-    phoneScatter->setName("Phones");
-    phoneScatter->setPointLabelsVisible(true);
-    phoneScatter->setMarkerShape(QScatterSeries::MarkerShapeCircle);
-    phoneScatter->setMarkerSize(10.0);
+    vector<QScatterSeries*> vSeries;
 
     time_t timev;
     time(&timev);
@@ -153,28 +158,46 @@ MainWindow::MainWindow(QWidget *parent)
 
     vlast = db.last_positions(CTime(2019, 10, 4, 13, 30, 30).GetTime());
 
-    for(vector<schema_triang>::iterator it=vlast.begin(); it!=vlast.end();++it){
-       *phoneScatter<<QPointF(it->x,it->y);
+    for(vector<schema_triang>::iterator it=vlast.begin(); it!=vlast.end();++it){        
+        QScatterSeries *phoneScatter = new QScatterSeries();
+        phoneScatter->setPointLabelsVisible(false);
+        connect(phoneScatter,&QXYSeries::hovered,this,[phoneScatter] (const QPointF &waste, bool check) {
+            if(check == true){
+                phoneScatter->setPointLabelsVisible(true);
+            }
+            else {
+                phoneScatter->setPointLabelsVisible(false);
+            }
+        });
+        phoneScatter->setMarkerShape(QScatterSeries::MarkerShapeCircle);
+        phoneScatter->setMarkerSize(10.0);
+        phoneScatter->setPointLabelsFormat(it->MAC);
+        *phoneScatter<<QPointF(it->x,it->y);
+        vSeries.push_back(phoneScatter);
     }
 
 
     // Configure your chart
     QChart *chartScatter = new QChart();
     chartScatter->addSeries(boardScatter);
-    chartScatter->addSeries(phoneScatter);
     QValueAxis *axisYmap = new QValueAxis();
     axisYmap->setRange(-20, 20);
     chartScatter->addAxis(axisYmap, Qt::AlignLeft);
     boardScatter->attachAxis(axisYmap);
-    phoneScatter->attachAxis(axisYmap);
     QValueAxis *axisXmap = new QValueAxis();
     axisXmap->setRange(-20, 20);
     chartScatter->addAxis(axisXmap, Qt::AlignBottom);
     boardScatter->attachAxis(axisXmap);
-    phoneScatter->attachAxis(axisXmap);
+
+    for(int i = 0; i < vSeries.size(); i++){
+        chartScatter->addSeries(vSeries.at(i));
+        vSeries.at(i)->attachAxis(axisYmap);
+        vSeries.at(i)->attachAxis(axisXmap);
+    }
+
     chartScatter->setTitle("Real time map of detected devices");
     chartScatter->setDropShadowEnabled(false);
-    chartScatter->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
+    chartScatter->legend()->setVisible(false);
 
     // Create your chart view
     QChartView *graphicsViewScatter = new QChartView(chartScatter);
@@ -183,36 +206,59 @@ MainWindow::MainWindow(QWidget *parent)
 
 
     this->mapTimer->setInterval(n_sec*1000);
-    connect(this->mapTimer, &QTimer::timeout,this, [phoneScatter,boardScatter,graphicsViewScatter]() {
+    connect(this->mapTimer, &QTimer::timeout,this, [boardScatter,graphicsViewScatter]() {
         Db_original db;
+        vector<QScatterSeries*> vSeries;
+
         time_t timev;
         time(&timev);
         vector<schema_triang> vlast;
 
-        //Usare timev invece di ctime
-        vlast = db.last_positions(CTime(2019, 10, 4, 13, 30, 00).GetTime());
+        // Usare timev invece di ctime
+
+        vlast = db.last_positions(CTime(2019, 10, 4, 13, 30, 30).GetTime());
 
         for(vector<schema_triang>::iterator it=vlast.begin(); it!=vlast.end();++it){
-           *phoneScatter<<QPointF(it->x,it->y);
+            QScatterSeries *phoneScatter = new QScatterSeries();
+            phoneScatter->setPointLabelsVisible(false);
+            connect(phoneScatter,&QXYSeries::hovered,phoneScatter,[phoneScatter] (const QPointF &waste, bool check) {
+                if(check == true){
+                    phoneScatter->setPointLabelsVisible(true);
+                }
+                else {
+                    phoneScatter->setPointLabelsVisible(false);
+                }
+            });
+            phoneScatter->setMarkerShape(QScatterSeries::MarkerShapeCircle);
+            phoneScatter->setMarkerSize(10.0);
+            phoneScatter->setPointLabelsFormat(it->MAC);
+            *phoneScatter<<QPointF(it->x,it->y);
+            vSeries.push_back(phoneScatter);
         }
+
 
         // Configure your chart
         QChart *chartScatter = new QChart();
         chartScatter->addSeries(boardScatter);
-        chartScatter->addSeries(phoneScatter);
         QValueAxis *axisYmap = new QValueAxis();
         axisYmap->setRange(-20, 20);
         chartScatter->addAxis(axisYmap, Qt::AlignLeft);
         boardScatter->attachAxis(axisYmap);
-        phoneScatter->attachAxis(axisYmap);
         QValueAxis *axisXmap = new QValueAxis();
         axisXmap->setRange(-20, 20);
         chartScatter->addAxis(axisXmap, Qt::AlignBottom);
         boardScatter->attachAxis(axisXmap);
-        phoneScatter->attachAxis(axisXmap);
+
+        for(int i = 0; i < vSeries.size(); i++){
+            chartScatter->addSeries(vSeries.at(i));
+            vSeries.at(i)->attachAxis(axisYmap);
+            vSeries.at(i)->attachAxis(axisXmap);
+        }
+
         chartScatter->setTitle("Real time map of detected devices");
         chartScatter->setDropShadowEnabled(false);
-        chartScatter->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
+        chartScatter->legend()->setVisible(false);
+
 
         // Create your chart view
         graphicsViewScatter->setChart(chartScatter);
@@ -473,12 +519,12 @@ MainWindow::MainWindow(QWidget *parent)
 
     setCentralWidget(tw);
 
-    connect(tw, QOverload<int>::of(&QTabWidget::currentChanged), this, [graphicsViewScatter] (int i) {
+    /*connect(tw, QOverload<int>::of(&QTabWidget::currentChanged), this, [graphicsViewScatter] (int i) {
         if(i==0){
             graphicsViewScatter->update();
         }
 
-    });
+    });*/
 
 
 }
