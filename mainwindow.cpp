@@ -93,7 +93,7 @@ MainWindow::MainWindow(QWidget *parent)
     vector<schema_triang> vlast;
 
     // Usare timev invece di ctime
-    vlast = db.last_positions(CTime(2019, 10, 4, 13, 30, 00).GetTime());
+    vlast = db.last_positions(CTime(2019, 10, 4, 13, 30, 30).GetTime());
 
     for(vector<schema_triang>::iterator it=vlast.begin(); it!=vlast.end();++it){
        *phoneScatter<<QPointF(it->x,it->y);
@@ -143,12 +143,12 @@ MainWindow::MainWindow(QWidget *parent)
         chartScatter->addSeries(boardScatter);
         chartScatter->addSeries(phoneScatter);
         QValueAxis *axisYmap = new QValueAxis();
-        axisYmap->setRange(0, 20);
+        axisYmap->setRange(-20, 20);
         chartScatter->addAxis(axisYmap, Qt::AlignLeft);
         boardScatter->attachAxis(axisYmap);
         phoneScatter->attachAxis(axisYmap);
         QValueAxis *axisXmap = new QValueAxis();
-        axisXmap->setRange(0, 20);
+        axisXmap->setRange(-20, 20);
         chartScatter->addAxis(axisXmap, Qt::AlignBottom);
         boardScatter->attachAxis(axisXmap);
         phoneScatter->attachAxis(axisXmap);
