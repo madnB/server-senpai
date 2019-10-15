@@ -13,6 +13,63 @@ void MainWindow::MqttStart(){
     this->mqtt.startDetached(program);
     //this->mqtt.
 }
+void show_history_plot(QLabel* histLabel, QChartView *histChartViewBar,QDateTimeEdit *histDateEdit)
+{
+Db_original db;
+QDateTime temp=histDateEdit->dateTime();
+QString dateText = QString("Date selected: %1").arg(temp.toString("d/M/yyyy"));
+histLabel->setText(dateText);
+QBarSet *set0hist = new QBarSet("Private MAC");
+QBarSet *set1hist = new QBarSet("Public MAC");
+
+map<string,num_ril> histMap;
+
+time_t histStart;
+time_t histEnd;
+
+histStart = temp.toTime_t();
+histEnd = temp.addSecs(1800).toTime_t();
+
+histMap = db.number_of_rilevations(histStart, histEnd);
+for(map<string,num_ril>::iterator it=histMap.begin();it!=histMap.end();++it)
+    qDebug()<<it->first.c_str()<< " "<< it->second.n_pub<<" - "<<it->second.n_priv;
+
+for(map<string,num_ril>::iterator itMap=histMap.begin(); itMap!=histMap.end();++itMap){
+   *set0hist << itMap->second.n_pub;
+   *set1hist << itMap->second.n_priv;
+}
+
+
+QStackedBarSeries *seriesBar = new QStackedBarSeries();
+seriesBar->append(set0hist);
+seriesBar->append(set1hist);
+
+// Configure updated chart
+QChart *chartBar = new QChart();
+chartBar->addSeries(seriesBar);
+chartBar->setTitle("Number of devices tracked");
+chartBar->setAnimationOptions(QChart::SeriesAnimations);
+
+QStringList categories;
+
+categories << temp.time().toString("hh:mm") << temp.time().addSecs(300).toString("hh:mm") << temp.time().addSecs(600).toString("hh:mm") << temp.time().addSecs(900).toString("hh:mm") << temp.time().addSecs(1200).toString("hh:mm") << temp.time().addSecs(1500).toString("hh:mm");
+
+QBarCategoryAxis *axisX = new QBarCategoryAxis();
+axisX->append(categories);
+chartBar->addAxis(axisX, Qt::AlignBottom);
+seriesBar->attachAxis(axisX);
+QValueAxis *axisY = new QValueAxis();
+chartBar->addAxis(axisY, Qt::AlignLeft);
+seriesBar->attachAxis(axisY);
+
+chartBar->legend()->setVisible(true);
+chartBar->legend()->setAlignment(Qt::AlignBottom);
+
+histChartViewBar->setChart(chartBar);
+histChartViewBar->setRenderHint(QPainter::Antialiasing);
+
+
+}
 
 /*void MainWindow::DB(){
     qDebug() << "Running DB";
@@ -223,7 +280,7 @@ MainWindow::MainWindow(QWidget *parent)
     histDateEdit->setMaximumDate(QDate::currentDate());
     histDateEdit->setDisplayFormat("yyyy.MM.dd hh:mm");
 
-
+    QPushButton * update_button = new QPushButton("Update", this);
     QLabel *histFormatLabel = new QLabel(tr("Pick start time"));
 
     QString histText = QString("Date selected: %1").arg(histDateEdit->date().toString("d/M/yyyy"));
@@ -235,7 +292,7 @@ MainWindow::MainWindow(QWidget *parent)
     QBarSet *set1hist = new QBarSet("Public MAC");
 
 
-    map<string,int*> histMap;
+    map<string,num_ril> histMap;
 
     time_t histStart;
     time_t histEnd;
@@ -244,10 +301,12 @@ MainWindow::MainWindow(QWidget *parent)
     histEnd = histDateEdit->dateTime().toTime_t();
 
     histMap = db.number_of_rilevations(histStart, histEnd);
+    for(map<string,num_ril>::iterator it=histMap.begin();it!=histMap.end();++it)
+        qDebug()<<it->first.c_str()<< " "<< it->second.n_pub<<" - "<<it->second.n_priv;
 
-    for(map<string,int*>::iterator itMap=histMap.begin(); itMap!=histMap.end();++itMap){
-       *set0hist << itMap->second[0];
-       *set1hist << itMap->second[1];
+    for(map<string,num_ril>::iterator itMap=histMap.begin(); itMap!=histMap.end();++itMap){
+       *set0hist << itMap->second.n_pub;
+       *set1hist << itMap->second.n_priv;
     }
 
 
@@ -279,65 +338,18 @@ MainWindow::MainWindow(QWidget *parent)
     histChartViewBar->setRenderHint(QPainter::Antialiasing);
 
 
-    // Update chart with selected time
-    connect(histDateEdit, &QDateTimeEdit::dateTimeChanged, this, [histLabel, histChartViewBar] (QDateTime temp){
+    // Update chart with update function
+    connect(update_button, &QPushButton::clicked, this, [histLabel, histChartViewBar,histDateEdit] (){
 
-        Db_original db;
-
-        QString dateText = QString("Date selected: %1").arg(temp.toString("d/M/yyyy"));
-        histLabel->setText(dateText);
-        QBarSet *set0hist = new QBarSet("Private MAC");
-        QBarSet *set1hist = new QBarSet("Public MAC");
-
-        map<string,int*> histMap;
-
-        time_t histStart;
-        time_t histEnd;
-
-        histStart = temp.toTime_t();
-        histEnd = temp.addSecs(1800).toTime_t();
-
-        histMap = db.number_of_rilevations(histStart, histEnd);
-
-        for(map<string,int*>::iterator itMap=histMap.begin(); itMap!=histMap.end();++itMap){
-           *set0hist << itMap->second[0];
-           *set1hist << itMap->second[1];
-        }
-
-
-        QStackedBarSeries *seriesBar = new QStackedBarSeries();
-        seriesBar->append(set0hist);
-        seriesBar->append(set1hist);
-
-        // Configure updated chart
-        QChart *chartBar = new QChart();
-        chartBar->addSeries(seriesBar);
-        chartBar->setTitle("Number of devices tracked");
-        chartBar->setAnimationOptions(QChart::SeriesAnimations);
-
-        QStringList categories;
-
-        categories << temp.time().toString("hh:mm") << temp.time().addSecs(300).toString("hh:mm") << temp.time().addSecs(600).toString("hh:mm") << temp.time().addSecs(900).toString("hh:mm") << temp.time().addSecs(1200).toString("hh:mm") << temp.time().addSecs(1500).toString("hh:mm");
-
-        QBarCategoryAxis *axisX = new QBarCategoryAxis();
-        axisX->append(categories);
-        chartBar->addAxis(axisX, Qt::AlignBottom);
-        seriesBar->attachAxis(axisX);
-        QValueAxis *axisY = new QValueAxis();
-        chartBar->addAxis(axisY, Qt::AlignLeft);
-        seriesBar->attachAxis(axisY);
-
-        chartBar->legend()->setVisible(true);
-        chartBar->legend()->setAlignment(Qt::AlignBottom);
-
-        histChartViewBar->setChart(chartBar);
-        histChartViewBar->setRenderHint(QPainter::Antialiasing);
-
-
+        show_history_plot(histLabel, histChartViewBar,histDateEdit);
     });
 
+    QHBoxLayout *changeDataLayout= new QHBoxLayout;
     QVBoxLayout *histLayout = new QVBoxLayout;
     histLayout->addWidget(histFormatLabel);
+    changeDataLayout->addWidget(histDateEdit,5);
+    changeDataLayout->addWidget(update_button,Qt::AlignRight);
+    histLayout->addLayout(changeDataLayout);
     histLayout->addWidget(histChartViewBar);
     histLayout->addWidget(histLabel);
     QWidget *histWidget = new QWidget;
@@ -355,7 +367,7 @@ MainWindow::MainWindow(QWidget *parent)
     statsDateEdit->setMaximumDate(QDate::currentDate());
     statsDateEdit->setDisplayFormat("yyyy.MM.dd hh:mm");
 
-    QLabel *statsEndLabel = new QLabel(tr("Pick finish time"));
+    QLabel *statsEndLabel = new QLabel(tr("Pick start time"));
 
     QLabel *statsFormatLabel = new QLabel(tr("Pick frequency period"));
 
