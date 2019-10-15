@@ -16,6 +16,7 @@ public:
     MainWindow(QWidget *parent = nullptr);
     QProcess mqtt;
     QTimer* timer;
+    QTimer* mapTimer;
     ~MainWindow();
 
 public slots:

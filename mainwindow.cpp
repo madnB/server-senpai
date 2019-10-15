@@ -36,6 +36,7 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     this->timer = new QTimer(this);
+    this->mapTimer = new QTimer(this);
 
 
 
@@ -78,14 +79,25 @@ MainWindow::MainWindow(QWidget *parent)
     boardScatter->setPointLabelsVisible(true);
     boardScatter->setMarkerShape(QScatterSeries::MarkerShapeRectangle);
     boardScatter->setMarkerSize(10.0);
-    *boardScatter << QPointF(3, 3) << QPointF(7, 6) << QPointF(10, 2);
+
+    *boardScatter<<QPointF(3,4);
 
     QScatterSeries *phoneScatter = new QScatterSeries();
     phoneScatter->setName("Phones");
     phoneScatter->setPointLabelsVisible(true);
     phoneScatter->setMarkerShape(QScatterSeries::MarkerShapeCircle);
     phoneScatter->setMarkerSize(10.0);
-    *phoneScatter << QPointF(5, 3) << QPointF(7, 2) << QPointF(3, 1);
+
+    time_t timev;
+    time(&timev);
+    vector<schema_triang> vlast;
+
+    // Usare timev invece di ctime
+    vlast = db.last_positions(CTime(2019, 10, 4, 13, 30, 00).GetTime());
+
+    for(vector<schema_triang>::iterator it=vlast.begin(); it!=vlast.end();++it){
+       *phoneScatter<<QPointF(it->x,it->y);
+    }
 
 
     // Configure your chart
@@ -109,6 +121,47 @@ MainWindow::MainWindow(QWidget *parent)
     // Create your chart view
     QChartView *graphicsViewScatter = new QChartView(chartScatter);
     graphicsViewScatter->setRenderHint(QPainter::Antialiasing);
+
+
+
+    this->mapTimer->setInterval(n_sec*1000);
+    connect(this->mapTimer, &QTimer::timeout,this, [phoneScatter,boardScatter,graphicsViewScatter]() {
+        Db_original db;
+        time_t timev;
+        time(&timev);
+        vector<schema_triang> vlast;
+
+        //Usare timev invece di ctime
+        vlast = db.last_positions(CTime(2019, 10, 4, 13, 30, 00).GetTime());
+
+        for(vector<schema_triang>::iterator it=vlast.begin(); it!=vlast.end();++it){
+           *phoneScatter<<QPointF(it->x,it->y);
+        }
+
+        // Configure your chart
+        QChart *chartScatter = new QChart();
+        chartScatter->addSeries(boardScatter);
+        chartScatter->addSeries(phoneScatter);
+        QValueAxis *axisYmap = new QValueAxis();
+        axisYmap->setRange(0, 20);
+        chartScatter->addAxis(axisYmap, Qt::AlignLeft);
+        boardScatter->attachAxis(axisYmap);
+        phoneScatter->attachAxis(axisYmap);
+        QValueAxis *axisXmap = new QValueAxis();
+        axisXmap->setRange(0, 20);
+        chartScatter->addAxis(axisXmap, Qt::AlignBottom);
+        boardScatter->attachAxis(axisXmap);
+        phoneScatter->attachAxis(axisXmap);
+        chartScatter->setTitle("Real time map of detected devices");
+        chartScatter->setDropShadowEnabled(false);
+        chartScatter->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
+
+        // Create your chart view
+        graphicsViewScatter->setChart(chartScatter);
+        graphicsViewScatter->setRenderHint(QPainter::Antialiasing);
+    });
+    this->mapTimer->start();
+
 
 
 
@@ -374,6 +427,13 @@ MainWindow::MainWindow(QWidget *parent)
     tw->addTab(statsWidget, "Stats");
 
     setCentralWidget(tw);
+
+    connect(tw, QOverload<int>::of(&QTabWidget::currentChanged), this, [graphicsViewScatter] (int i) {
+        if(i==0){
+            graphicsViewScatter->update();
+        }
+
+    });
 
 
 }
