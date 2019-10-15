@@ -2,14 +2,18 @@
 #include <limits>
 #include <set>
 #include <iostream>
+#include <QDebug>
 #include <functional>
 #include "schema/helperclass.h"
 
 using namespace std;
 
+Triangulation::Triangulation(){}
+
 map<string, Point> Triangulation::roots;
 vector<Distance> Triangulation::distances;
-
+int Triangulation::measure_power=-69;
+float Triangulation::constant_envir=2.25;
 float distance(Point point1, Point point2){
   return sqrt(pow(point1.x - point2.x, 2) +pow(point1.y - point2.y, 2) * 1.0);
 }
@@ -27,31 +31,43 @@ void kLargest(Column* arr, int k) {
 
 void Triangulation::initTriang(map<string, Point> r) {
   Triangulation::setRoots(r);
-  auto distances = Triangulation::getDistances();
+  //auto distances = getDistances();
+
+
 
   for(map<string, Point>::iterator it=r.begin(); it!=r.end(); ++it) {
+
     for(map<string, Point>::iterator it2=next<>(it, 1); it2!=r.end(); ++it2){
       Point point1=it->second;
       Point point2=it2->second;
       float distance=sqrt(pow(point1.x - point2.x, 2) +pow(point1.y - point2.y, 2) * 1.0);
+      qDebug()<<point1.x<<" "<<point1.y<<" "<<point2.x<<" "<<point2.y;
       Distance dist=Distance(distance, it->first, it2->first);
+      qDebug()<<distance;
+      qDebug()<<dist.mac1.c_str()<<" "<<dist.mac2.c_str()<<" "<<dist.distance;
+
       distances.push_back(dist);
     }
   }
   
   for(vector<Distance>::iterator it=distances.begin(); it!=distances.end(); it++)
-    cout<<"Distance between "<<it->mac1<<" and "<<it->mac2<<": "<<it->distance<<endl;
+    qDebug()<<"Distance between "<<it->mac1.c_str()<<" and "<<it->mac2.c_str()<<": "<<it->distance;
   cout<<endl;
 }
 
 Point Triangulation::triangolate(vector<schema_original> vector_dati, int N_schede) {
-  auto distances = Triangulation::getDistances();
+  auto distances = getDistances();
+  if(distances.empty())
+      qDebug()<<"CAZZO DI BUDDAH";
+  for(vector<Distance>::iterator it=distances.begin(); it!=distances.end(); it++)
+    qDebug()<<"Distance between "<<it->mac1.c_str()<<" and "<<it->mac2.c_str()<<": "<<it->distance;
   map<string, float> dists;
   vector<Point> allpoints;
 
-  for(auto v : vector_dati)
+  for(auto v : vector_dati){
     dists.insert(pair<string, float>(v.root, Triangulation::rssi2meter(v.RSSI)));
-  
+    qDebug()<< v.root.c_str() << " -triangulation::rssi= "<<v.RSSI<< " triangulation::meter= " << (double)Triangulation::rssi2meter(v.RSSI);
+  }
   for(vector<Distance>::iterator distIt=distances.begin(); distIt!=distances.end(); distIt++){
       vector<Point> points=Triangulation::findPoints(*distIt, dists);
 
@@ -66,7 +82,9 @@ Point Triangulation::triangolate(vector<schema_original> vector_dati, int N_sche
 }
 
 float Triangulation::rssi2meter(int rssi){
-  return rssi / 1.0;
+    //return rssi*-1.0;
+    return pow(10,((measure_power)-rssi)/(constant_envir*10));
+   // return (10^((measure_power)-rssi)/(constant_envir*10)));
 }
 
 vector<Point> Triangulation::findPoints(Distance rootDistance, map<string, float> dists) {
@@ -97,7 +115,15 @@ vector<Point> Triangulation::findPoints(Distance rootDistance, map<string, float
 }
 
 Point Triangulation::findTruePoint(vector< Point > points) {
-  auto roots = Triangulation::getRoots();
+  if(points.size()==0){
+
+      qDebug()<< "Points vuoto. Impossibile trovare punti";
+      return Point(numeric_limits<float>::quiet_NaN(), numeric_limits<float>::quiet_NaN());
+    }
+
+  qDebug()<<"points size"<<points.size();
+
+    auto roots = Triangulation::getRoots();
 
   vector<Column> matrix;
   int k=roots.size()*(roots.size()-1)/2;
@@ -109,11 +135,12 @@ Point Triangulation::findTruePoint(vector< Point > points) {
       if(i==j) matrix[i].distances.insert(pair<int, float>(j, numeric_limits<float>::max()));
       else matrix[i].distances.insert(pair<int, float>(j, distance(points[i], points[j])));
     }
-    	
+    qDebug()<<"K="<<k;
     kLargest(&matrix[i],k);
   }
   
   map<int, int> reps;
+  qDebug()<<"Points size: "<<points.size();
   for(int i=0; i<points.size(); i++)
     reps.insert(pair<int,int>(i,0));
   
@@ -124,7 +151,7 @@ Point Triangulation::findTruePoint(vector< Point > points) {
   }
 
   typedef function<bool(pair<int, int>, pair<int, int>)> Comparator;
-  Comparator compFunctor = [](pair<int, int> elem1 ,std::pair<int, int> elem2) { return elem1.second >= elem2.second; };
+  Comparator compFunctor = [](pair<int, int> elem1 ,std::pair<int, int> elem2) { if(elem1.second == elem2.second) return elem1.first<elem2.first; else return (elem1.second>elem2.second); };
 
   set<pair<int, int>, Comparator> setOfWords(reps.begin(), reps.end(), compFunctor);
   
