@@ -133,6 +133,7 @@ MainWindow::MainWindow(QWidget *parent)
     // Create your time series
     QScatterSeries *boardScatter = new QScatterSeries();
     boardScatter->setName("Boards");
+
     boardScatter->setPointLabelsVisible(false);
     connect(boardScatter,&QXYSeries::hovered,this,[boardScatter] (const QPointF &waste, bool check) {
         if(check == true){
@@ -150,11 +151,13 @@ MainWindow::MainWindow(QWidget *parent)
 
     vector<QScatterSeries*> vSeries;
 
+
     time_t timev;
     time(&timev);
     vector<schema_triang> vlast;
 
     // Usare timev invece di ctime
+
 
     vlast = db.last_positions(CTime(2019, 10, 4, 13, 30, 30).GetTime());
 
@@ -174,12 +177,14 @@ MainWindow::MainWindow(QWidget *parent)
         phoneScatter->setPointLabelsFormat(it->MAC);
         *phoneScatter<<QPointF(it->x,it->y);
         vSeries.push_back(phoneScatter);
+
     }
 
 
     // Configure your chart
     QChart *chartScatter = new QChart();
     chartScatter->addSeries(boardScatter);
+
     QValueAxis *axisYmap = new QValueAxis();
     axisYmap->setRange(-20, 20);
     chartScatter->addAxis(axisYmap, Qt::AlignLeft);
@@ -195,6 +200,7 @@ MainWindow::MainWindow(QWidget *parent)
         vSeries.at(i)->attachAxis(axisXmap);
     }
 
+
     chartScatter->setTitle("Real time map of detected devices");
     chartScatter->setDropShadowEnabled(false);
     chartScatter->legend()->setVisible(false);
@@ -206,13 +212,16 @@ MainWindow::MainWindow(QWidget *parent)
 
 
     this->mapTimer->setInterval(n_sec*1000);
+
     connect(this->mapTimer, &QTimer::timeout,this, [boardScatter,graphicsViewScatter]() {
         Db_original db;
         vector<QScatterSeries*> vSeries;
 
+
         time_t timev;
         time(&timev);
         vector<schema_triang> vlast;
+
 
         // Usare timev invece di ctime
 
@@ -260,6 +269,7 @@ MainWindow::MainWindow(QWidget *parent)
         chartScatter->legend()->setVisible(false);
 
 
+
         // Create your chart view
         graphicsViewScatter->setChart(chartScatter);
         graphicsViewScatter->setRenderHint(QPainter::Antialiasing);
@@ -280,8 +290,10 @@ MainWindow::MainWindow(QWidget *parent)
     histDateEdit->setMaximumDate(QDate::currentDate());
     histDateEdit->setDisplayFormat("yyyy.MM.dd hh:mm");
 
+
     QPushButton * update_button = new QPushButton("Update", this);
     QLabel *histFormatLabel = new QLabel(tr("Pick start time"));
+
 
     QString histText = QString("Date selected: %1").arg(histDateEdit->date().toString("d/M/yyyy"));
 
@@ -290,6 +302,7 @@ MainWindow::MainWindow(QWidget *parent)
     // Create time series using current time
     QBarSet *set0hist = new QBarSet("Private MAC");
     QBarSet *set1hist = new QBarSet("Public MAC");
+
 
 
     map<string,num_ril> histMap;
@@ -308,6 +321,7 @@ MainWindow::MainWindow(QWidget *parent)
        *set0hist << itMap->second.n_pub;
        *set1hist << itMap->second.n_priv;
     }
+
 
 
     QStackedBarSeries *histSeriesBar = new QStackedBarSeries();
@@ -337,6 +351,7 @@ MainWindow::MainWindow(QWidget *parent)
     QChartView *histChartViewBar = new QChartView(histChartBar);
     histChartViewBar->setRenderHint(QPainter::Antialiasing);
 
+
     // Update chart with enter press
     connect(histDateEdit, &QAbstractSpinBox::editingFinished, this, [histLabel, histChartViewBar,histDateEdit] (){
 
@@ -355,6 +370,7 @@ MainWindow::MainWindow(QWidget *parent)
     changeDataLayout->addWidget(histDateEdit,5);
     changeDataLayout->addWidget(update_button,Qt::AlignRight);
     histLayout->addLayout(changeDataLayout);
+
     histLayout->addWidget(histChartViewBar);
     histLayout->addWidget(histLabel);
     QWidget *histWidget = new QWidget;
@@ -371,6 +387,7 @@ MainWindow::MainWindow(QWidget *parent)
     QDateTimeEdit *statsDateEdit = new QDateTimeEdit(QDateTime::currentDateTime());
     statsDateEdit->setMaximumDate(QDate::currentDate());
     statsDateEdit->setDisplayFormat("yyyy.MM.dd hh:mm");
+
 
     QLabel *statsEndLabel = new QLabel(tr("Pick start time"));
 
@@ -524,12 +541,16 @@ MainWindow::MainWindow(QWidget *parent)
 
     setCentralWidget(tw);
 
+
     /*connect(tw, QOverload<int>::of(&QTabWidget::currentChanged), this, [graphicsViewScatter] (int i) {
+
         if(i==0){
             graphicsViewScatter->update();
         }
 
+
     });*/
+
 
 
 }
