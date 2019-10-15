@@ -118,7 +118,7 @@ Point Triangulation::findTruePoint(vector< Point > points) {
   if(points.size()==0){
 
       qDebug()<< "Points vuoto. Impossibile trovare punti";
-      return Point(1,1);
+      return Point(numeric_limits<float>::quiet_NaN(), numeric_limits<float>::quiet_NaN());
     }
 
   qDebug()<<"points size"<<points.size();
