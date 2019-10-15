@@ -93,7 +93,8 @@ MainWindow::MainWindow(QWidget *parent)
     vector<schema_triang> vlast;
 
     // Usare timev invece di ctime
-    vlast = db.last_positions(CTime(2019, 10, 4, 13, 30, 00).GetTime());
+
+    vlast = db.last_positions(CTime(2019, 10, 4, 13, 30, 30).GetTime());
 
     for(vector<schema_triang>::iterator it=vlast.begin(); it!=vlast.end();++it){
        *phoneScatter<<QPointF(it->x,it->y);
@@ -143,12 +144,12 @@ MainWindow::MainWindow(QWidget *parent)
         chartScatter->addSeries(boardScatter);
         chartScatter->addSeries(phoneScatter);
         QValueAxis *axisYmap = new QValueAxis();
-        axisYmap->setRange(0, 20);
+        axisYmap->setRange(-20, 20);
         chartScatter->addAxis(axisYmap, Qt::AlignLeft);
         boardScatter->attachAxis(axisYmap);
         phoneScatter->attachAxis(axisYmap);
         QValueAxis *axisXmap = new QValueAxis();
-        axisXmap->setRange(0, 20);
+        axisXmap->setRange(-20, 20);
         chartScatter->addAxis(axisXmap, Qt::AlignBottom);
         boardScatter->attachAxis(axisXmap);
         phoneScatter->attachAxis(axisXmap);
@@ -176,6 +177,7 @@ MainWindow::MainWindow(QWidget *parent)
     histDateEdit->setMaximumDate(QDate::currentDate());
     histDateEdit->setDisplayFormat("yyyy.MM.dd hh:mm");
 
+
     QLabel *histFormatLabel = new QLabel(tr("Pick start time"));
 
     QString histText = QString("Date selected: %1").arg(histDateEdit->date().toString("d/M/yyyy"));
@@ -185,6 +187,7 @@ MainWindow::MainWindow(QWidget *parent)
     // Create time series using current time
     QBarSet *set0hist = new QBarSet("Private MAC");
     QBarSet *set1hist = new QBarSet("Public MAC");
+
 
     map<string,int*> histMap;
 
@@ -232,6 +235,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Update chart with selected time
     connect(histDateEdit, &QDateTimeEdit::dateTimeChanged, this, [histLabel, histChartViewBar] (QDateTime temp){
+
         Db_original db;
 
         QString dateText = QString("Date selected: %1").arg(temp.toString("d/M/yyyy"));
@@ -266,7 +270,9 @@ MainWindow::MainWindow(QWidget *parent)
         chartBar->setAnimationOptions(QChart::SeriesAnimations);
 
         QStringList categories;
+
         categories << temp.time().toString("hh:mm") << temp.time().addSecs(300).toString("hh:mm") << temp.time().addSecs(600).toString("hh:mm") << temp.time().addSecs(900).toString("hh:mm") << temp.time().addSecs(1200).toString("hh:mm") << temp.time().addSecs(1500).toString("hh:mm");
+
         QBarCategoryAxis *axisX = new QBarCategoryAxis();
         axisX->append(categories);
         chartBar->addAxis(axisX, Qt::AlignBottom);

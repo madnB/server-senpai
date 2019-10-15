@@ -299,7 +299,7 @@ vector<schema_triang> Db_original::last_positions(time_t timestamp) {
     char timestamp_fin_char[20];
     rawtime = timestamp_fin.GetTime();
     localtime_s(&timeinfo, &rawtime);
-    strftime(timestamp_fin_char, 20, "%Y/%m/%d %H:%M:%S", &timeinfo);
+    strftime(timestamp_fin_char, 20, "%Y%m%d%H%M%S", &timeinfo);
     string timestamp_fin_s(timestamp_fin_char);
 
     char timestamp_in_char[20];
@@ -307,7 +307,7 @@ vector<schema_triang> Db_original::last_positions(time_t timestamp) {
     CTime timestamp_in = timestamp_fin - sec_range;
     rawtime = timestamp_in.GetTime();
     localtime_s(&timeinfo, &rawtime);
-    strftime(timestamp_in_char, 20, "%Y/%m/%d %H:%M:%S", &timeinfo);
+    strftime(timestamp_in_char, 20, "%Y%m%d%H%M%S", &timeinfo);
     string timestamp_in_s(timestamp_in_char);
 
     //seleziono tutti i record aventi tempo nell'intervallo
