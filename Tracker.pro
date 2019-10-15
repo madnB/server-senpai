@@ -21,6 +21,7 @@ SOURCES += \
     lib/sqlite3.c \
     main.cpp \
     mainwindow.cpp \
+    num_ril.cpp \
     schema/schema_original.cpp \
     schema/schema_triang.cpp
 
@@ -31,6 +32,7 @@ HEADERS += \
     db/triangulation.h \
     lib/sqlite3.h \
     mainwindow.h \
+    num_ril.h \
     schema/helperclass.h \
     schema/mac_time.h \
     schema/schema_original.h \

@@ -13,6 +13,63 @@ void MainWindow::MqttStart(){
     this->mqtt.startDetached(program);
     //this->mqtt.
 }
+void show_history_plot(QLabel* histLabel, QChartView *histChartViewBar,QDateTimeEdit *histDateEdit)
+{
+Db_original db;
+QDateTime temp=histDateEdit->dateTime();
+QString dateText = QString("Date selected: %1").arg(temp.toString("d/M/yyyy"));
+histLabel->setText(dateText);
+QBarSet *set0hist = new QBarSet("Private MAC");
+QBarSet *set1hist = new QBarSet("Public MAC");
+
+map<string,num_ril> histMap;
+
+time_t histStart;
+time_t histEnd;
+
+histStart = temp.toTime_t();
+histEnd = temp.addSecs(1800).toTime_t();
+
+histMap = db.number_of_rilevations(histStart, histEnd);
+for(map<string,num_ril>::iterator it=histMap.begin();it!=histMap.end();++it)
+    qDebug()<<it->first.c_str()<< " "<< it->second.n_pub<<" - "<<it->second.n_priv;
+
+for(map<string,num_ril>::iterator itMap=histMap.begin(); itMap!=histMap.end();++itMap){
+   *set0hist << itMap->second.n_pub;
+   *set1hist << itMap->second.n_priv;
+}
+
+
+QStackedBarSeries *seriesBar = new QStackedBarSeries();
+seriesBar->append(set0hist);
+seriesBar->append(set1hist);
+
+// Configure updated chart
+QChart *chartBar = new QChart();
+chartBar->addSeries(seriesBar);
+chartBar->setTitle("Number of devices tracked");
+chartBar->setAnimationOptions(QChart::SeriesAnimations);
+
+QStringList categories;
+
+categories << temp.time().toString("hh:mm") << temp.time().addSecs(300).toString("hh:mm") << temp.time().addSecs(600).toString("hh:mm") << temp.time().addSecs(900).toString("hh:mm") << temp.time().addSecs(1200).toString("hh:mm") << temp.time().addSecs(1500).toString("hh:mm");
+
+QBarCategoryAxis *axisX = new QBarCategoryAxis();
+axisX->append(categories);
+chartBar->addAxis(axisX, Qt::AlignBottom);
+seriesBar->attachAxis(axisX);
+QValueAxis *axisY = new QValueAxis();
+chartBar->addAxis(axisY, Qt::AlignLeft);
+seriesBar->attachAxis(axisY);
+
+chartBar->legend()->setVisible(true);
+chartBar->legend()->setAlignment(Qt::AlignBottom);
+
+histChartViewBar->setChart(chartBar);
+histChartViewBar->setRenderHint(QPainter::Antialiasing);
+
+
+}
 
 /*void MainWindow::DB(){
     qDebug() << "Running DB";
@@ -54,7 +111,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     db.triang.initTriang(roots);
 
-    int n_sec=1;
+    int n_sec=10;
     this->timer->setInterval(n_sec*1000);
     connect(this->timer, &QTimer::timeout,this, []() {
         Db_original db;
@@ -76,47 +133,77 @@ MainWindow::MainWindow(QWidget *parent)
     // Create your time series
     QScatterSeries *boardScatter = new QScatterSeries();
     boardScatter->setName("Boards");
-    boardScatter->setPointLabelsVisible(true);
+
+    boardScatter->setPointLabelsVisible(false);
+    connect(boardScatter,&QXYSeries::hovered,this,[boardScatter] (const QPointF &waste, bool check) {
+        if(check == true){
+            boardScatter->setPointLabelsVisible(true);
+        }
+        else {
+            boardScatter->setPointLabelsVisible(false);
+        }
+
+    });
     boardScatter->setMarkerShape(QScatterSeries::MarkerShapeRectangle);
-    boardScatter->setMarkerSize(10.0);
+    boardScatter->setMarkerSize(15.0);
 
     *boardScatter<<QPointF(3,4);
 
-    QScatterSeries *phoneScatter = new QScatterSeries();
-    phoneScatter->setName("Phones");
-    phoneScatter->setPointLabelsVisible(true);
-    phoneScatter->setMarkerShape(QScatterSeries::MarkerShapeCircle);
-    phoneScatter->setMarkerSize(10.0);
+    vector<QScatterSeries*> vSeries;
+
 
     time_t timev;
     time(&timev);
     vector<schema_triang> vlast;
 
     // Usare timev invece di ctime
-    vlast = db.last_positions(CTime(2019, 10, 4, 13, 30, 00).GetTime());
 
-    for(vector<schema_triang>::iterator it=vlast.begin(); it!=vlast.end();++it){
-       *phoneScatter<<QPointF(it->x,it->y);
+
+    vlast = db.last_positions(CTime(2019, 10, 4, 13, 30, 30).GetTime());
+
+    for(vector<schema_triang>::iterator it=vlast.begin(); it!=vlast.end();++it){        
+        QScatterSeries *phoneScatter = new QScatterSeries();
+        phoneScatter->setPointLabelsVisible(false);
+        connect(phoneScatter,&QXYSeries::hovered,this,[phoneScatter] (const QPointF &waste, bool check) {
+            if(check == true){
+                phoneScatter->setPointLabelsVisible(true);
+            }
+            else {
+                phoneScatter->setPointLabelsVisible(false);
+            }
+        });
+        phoneScatter->setMarkerShape(QScatterSeries::MarkerShapeCircle);
+        phoneScatter->setMarkerSize(10.0);
+        phoneScatter->setPointLabelsFormat(it->MAC);
+        *phoneScatter<<QPointF(it->x,it->y);
+        vSeries.push_back(phoneScatter);
+
     }
 
 
     // Configure your chart
     QChart *chartScatter = new QChart();
     chartScatter->addSeries(boardScatter);
-    chartScatter->addSeries(phoneScatter);
+
     QValueAxis *axisYmap = new QValueAxis();
-    axisYmap->setRange(0, 20);
+    axisYmap->setRange(-20, 20);
     chartScatter->addAxis(axisYmap, Qt::AlignLeft);
     boardScatter->attachAxis(axisYmap);
-    phoneScatter->attachAxis(axisYmap);
     QValueAxis *axisXmap = new QValueAxis();
-    axisXmap->setRange(0, 20);
+    axisXmap->setRange(-20, 20);
     chartScatter->addAxis(axisXmap, Qt::AlignBottom);
     boardScatter->attachAxis(axisXmap);
-    phoneScatter->attachAxis(axisXmap);
+
+    for(int i = 0; i < vSeries.size(); i++){
+        chartScatter->addSeries(vSeries.at(i));
+        vSeries.at(i)->attachAxis(axisYmap);
+        vSeries.at(i)->attachAxis(axisXmap);
+    }
+
+
     chartScatter->setTitle("Real time map of detected devices");
     chartScatter->setDropShadowEnabled(false);
-    chartScatter->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
+    chartScatter->legend()->setVisible(false);
 
     // Create your chart view
     QChartView *graphicsViewScatter = new QChartView(chartScatter);
@@ -125,36 +212,63 @@ MainWindow::MainWindow(QWidget *parent)
 
 
     this->mapTimer->setInterval(n_sec*1000);
-    connect(this->mapTimer, &QTimer::timeout,this, [phoneScatter,boardScatter,graphicsViewScatter]() {
+
+    connect(this->mapTimer, &QTimer::timeout,this, [boardScatter,graphicsViewScatter]() {
         Db_original db;
+        vector<QScatterSeries*> vSeries;
+
+
         time_t timev;
         time(&timev);
         vector<schema_triang> vlast;
 
-        //Usare timev invece di ctime
-        vlast = db.last_positions(CTime(2019, 10, 4, 13, 30, 00).GetTime());
+
+        // Usare timev invece di ctime
+
+        vlast = db.last_positions(CTime(2019, 10, 4, 13, 30, 30).GetTime());
 
         for(vector<schema_triang>::iterator it=vlast.begin(); it!=vlast.end();++it){
-           *phoneScatter<<QPointF(it->x,it->y);
+            QScatterSeries *phoneScatter = new QScatterSeries();
+            phoneScatter->setPointLabelsVisible(false);
+            connect(phoneScatter,&QXYSeries::hovered,phoneScatter,[phoneScatter] (const QPointF &waste, bool check) {
+                if(check == true){
+                    phoneScatter->setPointLabelsVisible(true);
+                }
+                else {
+                    phoneScatter->setPointLabelsVisible(false);
+                }
+            });
+            phoneScatter->setMarkerShape(QScatterSeries::MarkerShapeCircle);
+            phoneScatter->setMarkerSize(10.0);
+            phoneScatter->setPointLabelsFormat(it->MAC);
+            *phoneScatter<<QPointF(it->x,it->y);
+            vSeries.push_back(phoneScatter);
         }
+
 
         // Configure your chart
         QChart *chartScatter = new QChart();
         chartScatter->addSeries(boardScatter);
-        chartScatter->addSeries(phoneScatter);
         QValueAxis *axisYmap = new QValueAxis();
-        axisYmap->setRange(0, 20);
+        axisYmap->setRange(-20, 20);
         chartScatter->addAxis(axisYmap, Qt::AlignLeft);
         boardScatter->attachAxis(axisYmap);
-        phoneScatter->attachAxis(axisYmap);
         QValueAxis *axisXmap = new QValueAxis();
-        axisXmap->setRange(0, 20);
+        axisXmap->setRange(-20, 20);
         chartScatter->addAxis(axisXmap, Qt::AlignBottom);
         boardScatter->attachAxis(axisXmap);
-        phoneScatter->attachAxis(axisXmap);
+
+        for(int i = 0; i < vSeries.size(); i++){
+            chartScatter->addSeries(vSeries.at(i));
+            vSeries.at(i)->attachAxis(axisYmap);
+            vSeries.at(i)->attachAxis(axisXmap);
+        }
+
         chartScatter->setTitle("Real time map of detected devices");
         chartScatter->setDropShadowEnabled(false);
-        chartScatter->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
+        chartScatter->legend()->setVisible(false);
+
+
 
         // Create your chart view
         graphicsViewScatter->setChart(chartScatter);
@@ -176,7 +290,10 @@ MainWindow::MainWindow(QWidget *parent)
     histDateEdit->setMaximumDate(QDate::currentDate());
     histDateEdit->setDisplayFormat("yyyy.MM.dd hh:mm");
 
-    QLabel *histFormatLabel = new QLabel(tr("Pick finish time"));
+
+    QPushButton * update_button = new QPushButton("Update", this);
+    QLabel *histFormatLabel = new QLabel(tr("Pick start time"));
+
 
     QString histText = QString("Date selected: %1").arg(histDateEdit->date().toString("d/M/yyyy"));
 
@@ -186,8 +303,26 @@ MainWindow::MainWindow(QWidget *parent)
     QBarSet *set0hist = new QBarSet("Private MAC");
     QBarSet *set1hist = new QBarSet("Public MAC");
 
-    *set0hist << 1 << 2 << 3 << 4 << 5 << 6;
-    *set1hist << 5 << 0 << 0 << 4 << 0 << 7;
+
+
+    map<string,num_ril> histMap;
+
+    time_t histStart;
+    time_t histEnd;
+
+    histStart = histDateEdit->dateTime().addSecs(-1800).toTime_t();
+    histEnd = histDateEdit->dateTime().toTime_t();
+
+    histMap = db.number_of_rilevations(histStart, histEnd);
+    for(map<string,num_ril>::iterator it=histMap.begin();it!=histMap.end();++it)
+        qDebug()<<it->first.c_str()<< " "<< it->second.n_pub<<" - "<<it->second.n_priv;
+
+    for(map<string,num_ril>::iterator itMap=histMap.begin(); itMap!=histMap.end();++itMap){
+       *set0hist << itMap->second.n_pub;
+       *set1hist << itMap->second.n_priv;
+    }
+
+
 
     QStackedBarSeries *histSeriesBar = new QStackedBarSeries();
     histSeriesBar->append(set0hist);
@@ -200,7 +335,7 @@ MainWindow::MainWindow(QWidget *parent)
     histChartBar->setAnimationOptions(QChart::SeriesAnimations);
 
     QStringList categories;
-    categories << "Jan" << "Feb" << "Mar" << "Apr" << "May" << "Jun";
+    categories << histDateEdit->time().addSecs(-1500).toString("hh:mm") << histDateEdit->time().addSecs(-1200).toString("hh:mm") << histDateEdit->time().addSecs(-900).toString("hh:mm") << histDateEdit->time().addSecs(-600).toString("hh:mm") << histDateEdit->time().addSecs(-300).toString("hh:mm") << histDateEdit->time().toString("hh:mm");
     QBarCategoryAxis *axisX = new QBarCategoryAxis();
     axisX->append(categories);
     histChartBar->addAxis(axisX, Qt::AlignBottom);
@@ -217,48 +352,25 @@ MainWindow::MainWindow(QWidget *parent)
     histChartViewBar->setRenderHint(QPainter::Antialiasing);
 
 
-    // Update chart with selected time
-    connect(histDateEdit, &QDateTimeEdit::dateTimeChanged, this, [histLabel, histChartViewBar] (QDateTime temp){
-        QString dateText = QString("Date selected: %1").arg(temp.toString("d/M/yyyy"));
-        histLabel->setText(dateText);
-        QBarSet *set0 = new QBarSet("Private MAC");
-        QBarSet *set1 = new QBarSet("Public MAC");
+    // Update chart with enter press
+    connect(histDateEdit, &QAbstractSpinBox::editingFinished, this, [histLabel, histChartViewBar,histDateEdit] (){
 
-        *set0 << 1 << 2 << 3 << 4 << 5 << 6;
-        *set1 << 5 << 0 << 0 << 4 << 0 << 7;
-
-        QStackedBarSeries *seriesBar = new QStackedBarSeries();
-        seriesBar->append(set0);
-        seriesBar->append(set1);
-
-        // Configure updated chart
-        QChart *chartBar = new QChart();
-        chartBar->addSeries(seriesBar);
-        chartBar->setTitle("Number of devices tracked");
-        chartBar->setAnimationOptions(QChart::SeriesAnimations);
-
-        QStringList categories;
-        categories << "Jan" << "Feb" << "Mar" << "Apr" << "May" << "Jun";
-        QBarCategoryAxis *axisX = new QBarCategoryAxis();
-        axisX->append(categories);
-        chartBar->addAxis(axisX, Qt::AlignBottom);
-        seriesBar->attachAxis(axisX);
-        QValueAxis *axisY = new QValueAxis();
-        chartBar->addAxis(axisY, Qt::AlignLeft);
-        seriesBar->attachAxis(axisY);
-
-        chartBar->legend()->setVisible(true);
-        chartBar->legend()->setAlignment(Qt::AlignBottom);
-
-        histChartViewBar->setChart(chartBar);
-        histChartViewBar->setRenderHint(QPainter::Antialiasing);
-
-
+        show_history_plot(histLabel, histChartViewBar,histDateEdit);
     });
 
+    // Update chart with update function
+    connect(update_button, &QPushButton::clicked, this, [histLabel, histChartViewBar,histDateEdit] (){
+
+        show_history_plot(histLabel, histChartViewBar,histDateEdit);
+    });
+
+    QHBoxLayout *changeDataLayout= new QHBoxLayout;
     QVBoxLayout *histLayout = new QVBoxLayout;
     histLayout->addWidget(histFormatLabel);
-    histLayout->addWidget(histDateEdit);
+    changeDataLayout->addWidget(histDateEdit,5);
+    changeDataLayout->addWidget(update_button,Qt::AlignRight);
+    histLayout->addLayout(changeDataLayout);
+
     histLayout->addWidget(histChartViewBar);
     histLayout->addWidget(histLabel);
     QWidget *histWidget = new QWidget;
@@ -276,7 +388,8 @@ MainWindow::MainWindow(QWidget *parent)
     statsDateEdit->setMaximumDate(QDate::currentDate());
     statsDateEdit->setDisplayFormat("yyyy.MM.dd hh:mm");
 
-    QLabel *statsEndLabel = new QLabel(tr("Pick finish time"));
+
+    QLabel *statsEndLabel = new QLabel(tr("Pick start time"));
 
     QLabel *statsFormatLabel = new QLabel(tr("Pick frequency period"));
 
@@ -428,12 +541,16 @@ MainWindow::MainWindow(QWidget *parent)
 
     setCentralWidget(tw);
 
-    connect(tw, QOverload<int>::of(&QTabWidget::currentChanged), this, [graphicsViewScatter] (int i) {
+
+    /*connect(tw, QOverload<int>::of(&QTabWidget::currentChanged), this, [graphicsViewScatter] (int i) {
+
         if(i==0){
             graphicsViewScatter->update();
         }
 
-    });
+
+    });*/
+
 
 
 }
