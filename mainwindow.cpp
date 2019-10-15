@@ -337,6 +337,11 @@ MainWindow::MainWindow(QWidget *parent)
     QChartView *histChartViewBar = new QChartView(histChartBar);
     histChartViewBar->setRenderHint(QPainter::Antialiasing);
 
+    // Update chart with enter press
+    connect(histDateEdit, &QAbstractSpinBox::editingFinished, this, [histLabel, histChartViewBar,histDateEdit] (){
+
+        show_history_plot(histLabel, histChartViewBar,histDateEdit);
+    });
 
     // Update chart with update function
     connect(update_button, &QPushButton::clicked, this, [histLabel, histChartViewBar,histDateEdit] (){
