@@ -21,7 +21,7 @@
 #define K_BEST 2 //numero di mac piu frequenti ritornati
 #define INT_SEC 120   //intervallo valido per mostrare l'ultima posizione
 #define N_rilevazioni 1  //numero rilevazioni necessarie per essere "continuamente presente"
-#define N_schede 2		//numero di schede di rilevazione
+#define N_schede 3		//numero di schede di rilevazione
 #define minuti_cont 5	//intervallo di tempo in cui rilevare dispositivi presenti
 using namespace std;
 
@@ -138,7 +138,7 @@ void Db_original::loop(time_t timestamp)  {
 
         //per ogni MAC-TIMESTAMP che rispetta la condizione, chiamo la triangolazione passando un vector con i record e il numero di record del vettore(e quindi delle schede)
         //schema_triang dato_triang = triangolazione(vector_dati, N_schede);
-        Point estimated_point = triang.triangolate(vector_dati, N_schede);
+        Point estimated_point = triang.triangolate(vector_dati);
 
         //serve solo per test
         //schema_triang dato_triang(3, "98-54-1B-31-AC-8B", 0, "20191001190020", 10, 20);

@@ -18,7 +18,7 @@ class Triangulation {
 public:
   Triangulation();
   static void initTriang(map<string, Point> vector_dati);
-  static Point triangolate(vector<schema_original>, int);
+  static Point triangolate(vector<schema_original>);
   static float rssi2meter(int rssi);
   static vector<Point> findPoints(Distance, map<string, float>);
   static Point findTruePoint(vector<Point>);

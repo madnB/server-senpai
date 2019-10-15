@@ -13,8 +13,7 @@ void MainWindow::MqttStart(){
     this->mqtt.startDetached(program);
     //this->mqtt.
 }
-void show_history_plot(QLabel* histLabel, QChartView *histChartViewBar,QDateTimeEdit *histDateEdit)
-{
+void show_history_plot(QLabel* histLabel, QChartView *histChartViewBar,QDateTimeEdit *histDateEdit) {
 Db_original db;
 QDateTime temp=histDateEdit->dateTime();
 QString dateText = QString("Date selected: %1").arg(temp.toString("d/M/yyyy"));
@@ -101,22 +100,24 @@ MainWindow::MainWindow(QWidget *parent)
     MqttStart();
 
     // Start DB
-    Db_original db;
-    db.triang=Triangulation();
+    Db_original* db = new Db_original();
+    db->triang=Triangulation();
     // Init triangulation
     // TODO - read configuration
-    Point root1(0.0, 0.0), root2(0.8,0.0); //root3(0.0,5.0);
-    pair<string,Point> a("30:AE:A4:1D:52:BC",root1),b("30:AE:A4:75:23:E8",root2);//,c("a",root3);
-    map<string, Point> roots = { a,b};
+    Point root1(0.0, 2.5), root2(3.8,0.0), root3(0.0,0.0);
+    pair<string,Point> a("30:AE:A4:1D:52:BC",root1),b("30:AE:A4:75:23:E8",root2),c("A4:CF:12:55:88:F0",root3);
+    map<string, Point> roots = { a, b, c };
 
-    db.triang.initTriang(roots);
+    db->triang.initTriang(roots);
 
-    int n_sec=10;
+    int n_sec=30;
     this->timer->setInterval(n_sec*1000);
-    connect(this->timer, &QTimer::timeout,this, []() {
-        Db_original db;
-        db.triang=Triangulation();
-        db.loop(CTime(2019, 10, 4, 13, 30, 00).GetTime());});
+
+    connect(this->timer, &QTimer::timeout,this, [db]() {
+        db->triang=Triangulation();
+        time_t timev;
+        time(&timev);
+        db->loop(timev);});
     this->timer->start();
 
     //---------------------
@@ -159,7 +160,7 @@ MainWindow::MainWindow(QWidget *parent)
     // Usare timev invece di ctime
 
 
-    vlast = db.last_positions(CTime(2019, 10, 4, 13, 30, 30).GetTime());
+    vlast = db->last_positions(timev);
 
     for(vector<schema_triang>::iterator it=vlast.begin(); it!=vlast.end();++it){        
         QScatterSeries *phoneScatter = new QScatterSeries();
@@ -186,11 +187,11 @@ MainWindow::MainWindow(QWidget *parent)
     chartScatter->addSeries(boardScatter);
 
     QValueAxis *axisYmap = new QValueAxis();
-    axisYmap->setRange(-20, 20);
+    axisYmap->setRange(-5, 5);
     chartScatter->addAxis(axisYmap, Qt::AlignLeft);
     boardScatter->attachAxis(axisYmap);
     QValueAxis *axisXmap = new QValueAxis();
-    axisXmap->setRange(-20, 20);
+    axisXmap->setRange(-5, 5);
     chartScatter->addAxis(axisXmap, Qt::AlignBottom);
     boardScatter->attachAxis(axisXmap);
 
@@ -225,7 +226,7 @@ MainWindow::MainWindow(QWidget *parent)
 
         // Usare timev invece di ctime
 
-        vlast = db.last_positions(CTime(2019, 10, 4, 13, 30, 30).GetTime());
+        vlast = db.last_positions(timev);
 
         for(vector<schema_triang>::iterator it=vlast.begin(); it!=vlast.end();++it){
             QScatterSeries *phoneScatter = new QScatterSeries();
@@ -250,11 +251,11 @@ MainWindow::MainWindow(QWidget *parent)
         QChart *chartScatter = new QChart();
         chartScatter->addSeries(boardScatter);
         QValueAxis *axisYmap = new QValueAxis();
-        axisYmap->setRange(-20, 20);
+        axisYmap->setRange(-5, 5);
         chartScatter->addAxis(axisYmap, Qt::AlignLeft);
         boardScatter->attachAxis(axisYmap);
         QValueAxis *axisXmap = new QValueAxis();
-        axisXmap->setRange(-20, 20);
+        axisXmap->setRange(-5, 5);
         chartScatter->addAxis(axisXmap, Qt::AlignBottom);
         boardScatter->attachAxis(axisXmap);
 
@@ -313,13 +314,13 @@ MainWindow::MainWindow(QWidget *parent)
     histStart = histDateEdit->dateTime().addSecs(-1800).toTime_t();
     histEnd = histDateEdit->dateTime().toTime_t();
 
-    histMap = db.number_of_rilevations(histStart, histEnd);
+    histMap = db->number_of_rilevations(histStart, histEnd);
     for(map<string,num_ril>::iterator it=histMap.begin();it!=histMap.end();++it)
         qDebug()<<it->first.c_str()<< " "<< it->second.n_pub<<" - "<<it->second.n_priv;
 
     for(map<string,num_ril>::iterator itMap=histMap.begin(); itMap!=histMap.end();++itMap){
-       *set0hist << itMap->second.n_pub;
-       *set1hist << itMap->second.n_priv;
+       *set0hist << itMap->second.n_priv;
+       *set1hist << itMap->second.n_pub;
     }
 
 
