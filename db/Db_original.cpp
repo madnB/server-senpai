@@ -35,7 +35,7 @@ Db_original::Db_original() {
 }
 
 map<mac_time, set<schema_original>>  Db_original::dati_scheda;
-map<string, int*> Db_original::count_ril;
+map<string,num_ril> Db_original::count_ril;
 vector<schema_triang> Db_original::last_positions_ril;
 map<string, statistics> Db_original::stat;
 
@@ -188,7 +188,7 @@ int Db_original::callback_count_ril_pub(void *data, int argc, char **argv, char 
     //ogni volta che arriva un record vado a implementare il contatore delle rilevazioni pubbliche(ovvero bit 0) nell'orario rilevato,
     //ovvero nell'ultimo elemento della mappa, perche inserisco gli elementi uno alla volta prima di fare la query al database
 
-    (count_ril.rbegin())->second[0]++;
+    (count_ril.rbegin())->second.n_pub++;
 
     return 0;
 }
@@ -198,13 +198,13 @@ int Db_original::callback_count_ril_no_pub(void *data, int argc, char **argv, ch
     //ogni volta che arriva un record vado a implementare il contatore delle rilevazioni non pubbliche(ovvero bit 1) nell'orario rilevato,
     //ovvero nell'ultimo elemento della mappa, perche inserisco gli elementi uno alla volta prima di fare la query al database
 
-    (count_ril.rbegin())->second[1]++;
+    (count_ril.rbegin())->second.n_priv++;
 
     return 0;
 }
 
 
-map<string,int*> Db_original::number_of_rilevations(time_t timestamp_start, time_t timestamp_end) {
+map<string,num_ril> Db_original::number_of_rilevations(time_t timestamp_start, time_t timestamp_end) {
     //questa funzione riceve due timestamp: il primo impostato dall'utente, il secondo che abbia differenza di 5 minuti, e possono essere impostati dall'utente e consideriamo la mezzora successiva, mostrando le statistiche ogni 5 minuti
 
     //questa soluzione conta quante sono le rilevazioni di un dispositivo nei 5 minuti e restituisce solo quelle rilevate piu di N_volte
@@ -241,8 +241,8 @@ map<string,int*> Db_original::number_of_rilevations(time_t timestamp_start, time
         localtime_s(&timeinfo, &rawtime);
         strftime(timestamp_fin_char, 20, "%Y%m%d%H%M%S", &timeinfo);
         string timestamp_fin_s(timestamp_fin_char);
-
-        count_ril.insert(pair<string, int*>(timestamp_in_s, init_count));  //ogni riga ha l'orario di inizio e due bit a 0: il bit 0
+        num_ril n_ril;
+        count_ril.insert(pair<string, num_ril>(timestamp_in_s, n_ril));  //ogni riga ha l'orario di inizio e due bit a 0: il bit 0
                                                                           //indica mac pubblico, il bit 1 indica mac non pubblico
 
         string sql;
@@ -269,7 +269,8 @@ map<string,int*> Db_original::number_of_rilevations(time_t timestamp_start, time
             clog << "Query count_rilevazioni_pub tra " << timestamp_in_s << " and " << timestamp_fin_s << " effettuata correttamente" << endl;
         }
     }
-
+    for(map<string,num_ril>::iterator it=count_ril.begin();it!=count_ril.end();++it)
+        qDebug()<<it->first.c_str()<< " "<< it->second.n_pub<<" - "<<it->second.n_priv;
     return count_ril;
 
 }
