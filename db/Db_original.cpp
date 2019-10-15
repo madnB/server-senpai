@@ -9,6 +9,7 @@
 #include <stdarg.h>
 #include <set>
 #include <vector>
+#include <cmath>
 #include "QDebug"
 #include "schema/mac_time.h"
 #include "schema/schema_original.h"
@@ -141,7 +142,7 @@ void Db_original::loop(time_t timestamp)  {
 
         //serve solo per test
         //schema_triang dato_triang(3, "98-54-1B-31-AC-8B", 0, "20191001190020", 10, 20);
-
+    if(!isnan(estimated_point.x)||!isnan(estimated_point.y)){
         schema_triang dato_triang(69, selected->first.c_str(), vector_dati[0].isPub, selected->second.c_str(), estimated_point.x, estimated_point.y);
 
         //inserisco il risultato della triangolazione nella tabella History
@@ -161,6 +162,7 @@ void Db_original::loop(time_t timestamp)  {
         }
 
         sqlite3_finalize(stmt);
+    }
     }
 /*
     //elimino le righe analizzate dalla tabellaa originale
