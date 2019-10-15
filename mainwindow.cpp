@@ -176,7 +176,7 @@ MainWindow::MainWindow(QWidget *parent)
     histDateEdit->setMaximumDate(QDate::currentDate());
     histDateEdit->setDisplayFormat("yyyy.MM.dd hh:mm");
 
-    QLabel *histFormatLabel = new QLabel(tr("Pick finish time"));
+    QLabel *histFormatLabel = new QLabel(tr("Pick start time"));
 
     QString histText = QString("Date selected: %1").arg(histDateEdit->date().toString("d/M/yyyy"));
 
@@ -186,8 +186,21 @@ MainWindow::MainWindow(QWidget *parent)
     QBarSet *set0hist = new QBarSet("Private MAC");
     QBarSet *set1hist = new QBarSet("Public MAC");
 
-    *set0hist << 1 << 2 << 3 << 4 << 5 << 6;
-    *set1hist << 5 << 0 << 0 << 4 << 0 << 7;
+    map<string,int*> histMap;
+
+    time_t histStart;
+    time_t histEnd;
+
+    histStart = histDateEdit->dateTime().addSecs(-1800).toTime_t();
+    histEnd = histDateEdit->dateTime().toTime_t();
+
+    histMap = db.number_of_rilevations(histStart, histEnd);
+
+    for(map<string,int*>::iterator itMap=histMap.begin(); itMap!=histMap.end();++itMap){
+       *set0hist << itMap->second[0];
+       *set1hist << itMap->second[1];
+    }
+
 
     QStackedBarSeries *histSeriesBar = new QStackedBarSeries();
     histSeriesBar->append(set0hist);
@@ -200,7 +213,7 @@ MainWindow::MainWindow(QWidget *parent)
     histChartBar->setAnimationOptions(QChart::SeriesAnimations);
 
     QStringList categories;
-    categories << "Jan" << "Feb" << "Mar" << "Apr" << "May" << "Jun";
+    categories << histDateEdit->time().addSecs(-1500).toString("hh:mm") << histDateEdit->time().addSecs(-1200).toString("hh:mm") << histDateEdit->time().addSecs(-900).toString("hh:mm") << histDateEdit->time().addSecs(-600).toString("hh:mm") << histDateEdit->time().addSecs(-300).toString("hh:mm") << histDateEdit->time().toString("hh:mm");
     QBarCategoryAxis *axisX = new QBarCategoryAxis();
     axisX->append(categories);
     histChartBar->addAxis(axisX, Qt::AlignBottom);
@@ -219,17 +232,32 @@ MainWindow::MainWindow(QWidget *parent)
 
     // Update chart with selected time
     connect(histDateEdit, &QDateTimeEdit::dateTimeChanged, this, [histLabel, histChartViewBar] (QDateTime temp){
+        Db_original db;
+
         QString dateText = QString("Date selected: %1").arg(temp.toString("d/M/yyyy"));
         histLabel->setText(dateText);
-        QBarSet *set0 = new QBarSet("Private MAC");
-        QBarSet *set1 = new QBarSet("Public MAC");
+        QBarSet *set0hist = new QBarSet("Private MAC");
+        QBarSet *set1hist = new QBarSet("Public MAC");
 
-        *set0 << 1 << 2 << 3 << 4 << 5 << 6;
-        *set1 << 5 << 0 << 0 << 4 << 0 << 7;
+        map<string,int*> histMap;
+
+        time_t histStart;
+        time_t histEnd;
+
+        histStart = temp.toTime_t();
+        histEnd = temp.addSecs(1800).toTime_t();
+
+        histMap = db.number_of_rilevations(histStart, histEnd);
+
+        for(map<string,int*>::iterator itMap=histMap.begin(); itMap!=histMap.end();++itMap){
+           *set0hist << itMap->second[0];
+           *set1hist << itMap->second[1];
+        }
+
 
         QStackedBarSeries *seriesBar = new QStackedBarSeries();
-        seriesBar->append(set0);
-        seriesBar->append(set1);
+        seriesBar->append(set0hist);
+        seriesBar->append(set1hist);
 
         // Configure updated chart
         QChart *chartBar = new QChart();
@@ -238,7 +266,7 @@ MainWindow::MainWindow(QWidget *parent)
         chartBar->setAnimationOptions(QChart::SeriesAnimations);
 
         QStringList categories;
-        categories << "Jan" << "Feb" << "Mar" << "Apr" << "May" << "Jun";
+        categories << temp.time().toString("hh:mm") << temp.time().addSecs(300).toString("hh:mm") << temp.time().addSecs(600).toString("hh:mm") << temp.time().addSecs(900).toString("hh:mm") << temp.time().addSecs(1200).toString("hh:mm") << temp.time().addSecs(1500).toString("hh:mm");
         QBarCategoryAxis *axisX = new QBarCategoryAxis();
         axisX->append(categories);
         chartBar->addAxis(axisX, Qt::AlignBottom);
