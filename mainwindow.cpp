@@ -30,11 +30,13 @@ void MainWindow::closing(){
     this->mqtt.kill();
 }
 
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
     this->timer = new QTimer(this);
+    this->mapTimer = new QTimer(this);
 
 
 
@@ -65,19 +67,54 @@ MainWindow::MainWindow(QWidget *parent)
     //---------------------
 
     ui->setupUi(this);
+
+
+    // MAP TAB
+
+
+
     // Create your time series
-    QScatterSeries *seriesScatter = new QScatterSeries();
-    seriesScatter->setName("scatter");
-    seriesScatter->setPointLabelsVisible(true);
-    seriesScatter->setMarkerShape(QScatterSeries::MarkerShapeCircle);
-    seriesScatter->setMarkerSize(5.0);
-    *seriesScatter << QPointF(1, 1) << QPointF(3, 3) << QPointF(7, 6) << QPointF(8, 3) << QPointF(10, 2);
+    QScatterSeries *boardScatter = new QScatterSeries();
+    boardScatter->setName("Boards");
+    boardScatter->setPointLabelsVisible(true);
+    boardScatter->setMarkerShape(QScatterSeries::MarkerShapeRectangle);
+    boardScatter->setMarkerSize(10.0);
+
+    *boardScatter<<QPointF(3,4);
+
+    QScatterSeries *phoneScatter = new QScatterSeries();
+    phoneScatter->setName("Phones");
+    phoneScatter->setPointLabelsVisible(true);
+    phoneScatter->setMarkerShape(QScatterSeries::MarkerShapeCircle);
+    phoneScatter->setMarkerSize(10.0);
+
+    time_t timev;
+    time(&timev);
+    vector<schema_triang> vlast;
+
+    // Usare timev invece di ctime
+    vlast = db.last_positions(CTime(2019, 10, 4, 13, 30, 00).GetTime());
+
+    for(vector<schema_triang>::iterator it=vlast.begin(); it!=vlast.end();++it){
+       *phoneScatter<<QPointF(it->x,it->y);
+    }
+
 
     // Configure your chart
     QChart *chartScatter = new QChart();
-    chartScatter->addSeries(seriesScatter);
-    chartScatter->createDefaultAxes();
-    chartScatter->setTitle("Simple scatter chart example");
+    chartScatter->addSeries(boardScatter);
+    chartScatter->addSeries(phoneScatter);
+    QValueAxis *axisYmap = new QValueAxis();
+    axisYmap->setRange(0, 20);
+    chartScatter->addAxis(axisYmap, Qt::AlignLeft);
+    boardScatter->attachAxis(axisYmap);
+    phoneScatter->attachAxis(axisYmap);
+    QValueAxis *axisXmap = new QValueAxis();
+    axisXmap->setRange(0, 20);
+    chartScatter->addAxis(axisXmap, Qt::AlignBottom);
+    boardScatter->attachAxis(axisXmap);
+    phoneScatter->attachAxis(axisXmap);
+    chartScatter->setTitle("Real time map of detected devices");
     chartScatter->setDropShadowEnabled(false);
     chartScatter->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
 
@@ -86,56 +123,317 @@ MainWindow::MainWindow(QWidget *parent)
     graphicsViewScatter->setRenderHint(QPainter::Antialiasing);
 
 
-    // Create your time series
-    QBarSet *set0 = new QBarSet("Jane");
-    QBarSet *set1 = new QBarSet("John");
-    QBarSet *set2 = new QBarSet("Axel");
-    QBarSet *set3 = new QBarSet("Mary");
-    QBarSet *set4 = new QBarSet("Samantha");
 
-    *set0 << 1 << 2 << 3 << 4 << 5 << 6;
-    *set1 << 5 << 0 << 0 << 4 << 0 << 7;
-    *set2 << 3 << 5 << 8 << 13 << 8 << 5;
-    *set3 << 5 << 6 << 7 << 3 << 4 << 5;
-    *set4 << 9 << 7 << 5 << 3 << 1 << 2;
+    this->mapTimer->setInterval(n_sec*1000);
+    connect(this->mapTimer, &QTimer::timeout,this, [phoneScatter,boardScatter,graphicsViewScatter]() {
+        Db_original db;
+        time_t timev;
+        time(&timev);
+        vector<schema_triang> vlast;
 
-    QStackedBarSeries *seriesBar = new QStackedBarSeries();
-    seriesBar->append(set0);
-    seriesBar->append(set1);
-    seriesBar->append(set2);
-    seriesBar->append(set3);
-    seriesBar->append(set4);
+        //Usare timev invece di ctime
+        vlast = db.last_positions(CTime(2019, 10, 4, 13, 30, 00).GetTime());
 
-    // Configure your chart
-    QChart *chartBar = new QChart();
-    chartBar->addSeries(seriesBar);
-    chartBar->setTitle("Simple stackedbarchart example");
-    chartBar->setAnimationOptions(QChart::SeriesAnimations);
+        for(vector<schema_triang>::iterator it=vlast.begin(); it!=vlast.end();++it){
+           *phoneScatter<<QPointF(it->x,it->y);
+        }
+
+        // Configure your chart
+        QChart *chartScatter = new QChart();
+        chartScatter->addSeries(boardScatter);
+        chartScatter->addSeries(phoneScatter);
+        QValueAxis *axisYmap = new QValueAxis();
+        axisYmap->setRange(0, 20);
+        chartScatter->addAxis(axisYmap, Qt::AlignLeft);
+        boardScatter->attachAxis(axisYmap);
+        phoneScatter->attachAxis(axisYmap);
+        QValueAxis *axisXmap = new QValueAxis();
+        axisXmap->setRange(0, 20);
+        chartScatter->addAxis(axisXmap, Qt::AlignBottom);
+        boardScatter->attachAxis(axisXmap);
+        phoneScatter->attachAxis(axisXmap);
+        chartScatter->setTitle("Real time map of detected devices");
+        chartScatter->setDropShadowEnabled(false);
+        chartScatter->legend()->setMarkerShape(QLegend::MarkerShapeFromSeries);
+
+        // Create your chart view
+        graphicsViewScatter->setChart(chartScatter);
+        graphicsViewScatter->setRenderHint(QPainter::Antialiasing);
+    });
+    this->mapTimer->start();
+
+
+
+
+
+    //HISTORY TAB
+
+
+
+    // Create time and date picker
+
+    QDateTimeEdit *histDateEdit = new QDateTimeEdit(QDateTime::currentDateTime());
+    histDateEdit->setMaximumDate(QDate::currentDate());
+    histDateEdit->setDisplayFormat("yyyy.MM.dd hh:mm");
+
+    QLabel *histFormatLabel = new QLabel(tr("Pick finish time"));
+
+    QString histText = QString("Date selected: %1").arg(histDateEdit->date().toString("d/M/yyyy"));
+
+    QLabel* histLabel = new QLabel(histText);
+
+    // Create time series using current time
+    QBarSet *set0hist = new QBarSet("Private MAC");
+    QBarSet *set1hist = new QBarSet("Public MAC");
+
+    *set0hist << 1 << 2 << 3 << 4 << 5 << 6;
+    *set1hist << 5 << 0 << 0 << 4 << 0 << 7;
+
+    QStackedBarSeries *histSeriesBar = new QStackedBarSeries();
+    histSeriesBar->append(set0hist);
+    histSeriesBar->append(set1hist);
+
+    // Configure the chart using current time
+    QChart *histChartBar = new QChart();
+    histChartBar->addSeries(histSeriesBar);
+    histChartBar->setTitle("Number of devices tracked");
+    histChartBar->setAnimationOptions(QChart::SeriesAnimations);
 
     QStringList categories;
     categories << "Jan" << "Feb" << "Mar" << "Apr" << "May" << "Jun";
     QBarCategoryAxis *axisX = new QBarCategoryAxis();
     axisX->append(categories);
-    chartBar->addAxis(axisX, Qt::AlignBottom);
-    seriesBar->attachAxis(axisX);
+    histChartBar->addAxis(axisX, Qt::AlignBottom);
+    histSeriesBar->attachAxis(axisX);
     QValueAxis *axisY = new QValueAxis();
-    chartBar->addAxis(axisY, Qt::AlignLeft);
-    seriesBar->attachAxis(axisY);
+    histChartBar->addAxis(axisY, Qt::AlignLeft);
+    histSeriesBar->attachAxis(axisY);
 
-    chartBar->legend()->setVisible(true);
-    chartBar->legend()->setAlignment(Qt::AlignBottom);
+    histChartBar->legend()->setVisible(true);
+    histChartBar->legend()->setAlignment(Qt::AlignBottom);
 
-    // Create your chart view
-    QChartView *chartViewBar = new QChartView(chartBar);
-    chartViewBar->setRenderHint(QPainter::Antialiasing);
+    // Create chart view
+    QChartView *histChartViewBar = new QChartView(histChartBar);
+    histChartViewBar->setRenderHint(QPainter::Antialiasing);
+
+
+    // Update chart with selected time
+    connect(histDateEdit, &QDateTimeEdit::dateTimeChanged, this, [histLabel, histChartViewBar] (QDateTime temp){
+        QString dateText = QString("Date selected: %1").arg(temp.toString("d/M/yyyy"));
+        histLabel->setText(dateText);
+        QBarSet *set0 = new QBarSet("Private MAC");
+        QBarSet *set1 = new QBarSet("Public MAC");
+
+        *set0 << 1 << 2 << 3 << 4 << 5 << 6;
+        *set1 << 5 << 0 << 0 << 4 << 0 << 7;
+
+        QStackedBarSeries *seriesBar = new QStackedBarSeries();
+        seriesBar->append(set0);
+        seriesBar->append(set1);
+
+        // Configure updated chart
+        QChart *chartBar = new QChart();
+        chartBar->addSeries(seriesBar);
+        chartBar->setTitle("Number of devices tracked");
+        chartBar->setAnimationOptions(QChart::SeriesAnimations);
+
+        QStringList categories;
+        categories << "Jan" << "Feb" << "Mar" << "Apr" << "May" << "Jun";
+        QBarCategoryAxis *axisX = new QBarCategoryAxis();
+        axisX->append(categories);
+        chartBar->addAxis(axisX, Qt::AlignBottom);
+        seriesBar->attachAxis(axisX);
+        QValueAxis *axisY = new QValueAxis();
+        chartBar->addAxis(axisY, Qt::AlignLeft);
+        seriesBar->attachAxis(axisY);
+
+        chartBar->legend()->setVisible(true);
+        chartBar->legend()->setAlignment(Qt::AlignBottom);
+
+        histChartViewBar->setChart(chartBar);
+        histChartViewBar->setRenderHint(QPainter::Antialiasing);
+
+
+    });
+
+    QVBoxLayout *histLayout = new QVBoxLayout;
+    histLayout->addWidget(histFormatLabel);
+    histLayout->addWidget(histDateEdit);
+    histLayout->addWidget(histChartViewBar);
+    histLayout->addWidget(histLabel);
+    QWidget *histWidget = new QWidget;
+    histWidget->setLayout(histLayout);
+
+
+
+    // STATS TAB
+
+
+
+    // Create time and date picker
+
+    QDateTimeEdit *statsDateEdit = new QDateTimeEdit(QDateTime::currentDateTime());
+    statsDateEdit->setMaximumDate(QDate::currentDate());
+    statsDateEdit->setDisplayFormat("yyyy.MM.dd hh:mm");
+
+    QLabel *statsEndLabel = new QLabel(tr("Pick finish time"));
+
+    QLabel *statsFormatLabel = new QLabel(tr("Pick frequency period"));
+
+    QString statsText = QString("Date selected: %1").arg(statsDateEdit->date().toString("d/M/yyyy"));
+
+    QLabel* statsLabel = new QLabel(statsText);
+
+    QComboBox *statsComboBox = new QComboBox;
+        statsComboBox->addItem(tr("Last 2 hours"));
+        statsComboBox->addItem(tr("Last day"));
+        statsComboBox->addItem(tr("Last week"));
+
+    // Create time series using current time
+    QLineSeries *statsLineseries = new QLineSeries();
+        statsLineseries->setName("Number of devices tracked");
+        statsLineseries->append(QPoint(0, 4));
+        statsLineseries->append(QPoint(1, 15));
+        statsLineseries->append(QPoint(2, 20));
+        statsLineseries->append(QPoint(3, 4));
+        statsLineseries->append(QPoint(4, 12));
+        statsLineseries->append(QPoint(5, 17));
+
+
+    // Configure the chart using current time
+    QChart *statsChartBar = new QChart();
+    statsChartBar->addSeries(statsLineseries);
+    statsChartBar->setTitle("Number of devices tracked");
+    statsChartBar->setAnimationOptions(QChart::SeriesAnimations);
+
+    QStringList statsCategories;
+    statsCategories << "Jan" << "Feb" << "Mar" << "Apr" << "May" << "Jun";
+    QBarCategoryAxis *axisXstats = new QBarCategoryAxis();
+    axisXstats->append(statsCategories);
+    statsChartBar->addAxis(axisXstats, Qt::AlignBottom);
+    statsLineseries->attachAxis(axisXstats);
+    axisXstats->setRange(QString("Jan"), QString("Jun"));
+    QValueAxis *axisYstats = new QValueAxis();
+    statsChartBar->addAxis(axisYstats, Qt::AlignLeft);
+    statsLineseries->attachAxis(axisYstats);
+
+    statsChartBar->legend()->setVisible(true);
+    statsChartBar->legend()->setAlignment(Qt::AlignBottom);
+
+    // Create chart view
+    QChartView *statsChartViewBar = new QChartView(statsChartBar);
+    statsChartViewBar->setRenderHint(QPainter::Antialiasing);
+
+
+    // Update chart with selected time
+    connect(statsDateEdit, &QDateTimeEdit::dateTimeChanged, this, [statsLabel, statsChartViewBar] (QDateTime temp){
+        QString dateText = QString("Date selected: %1").arg(temp.toString("d/M/yyyy"));
+        statsLabel->setText(dateText);
+        QLineSeries *statsLineseries = new QLineSeries();
+            statsLineseries->setName("Number of devices tracked");
+            statsLineseries->append(QPoint(0, 4));
+            statsLineseries->append(QPoint(1, 15));
+            statsLineseries->append(QPoint(2, 20));
+            statsLineseries->append(QPoint(3, 4));
+            statsLineseries->append(QPoint(4, 12));
+            statsLineseries->append(QPoint(5, 17));
+
+            // Configure the chart using current time
+            QChart *statsChartBar = new QChart();
+            statsChartBar->addSeries(statsLineseries);
+            statsChartBar->setTitle("Number of devices tracked");
+            statsChartBar->setAnimationOptions(QChart::SeriesAnimations);
+
+            QStringList statsCategories;
+            statsCategories << "Jan" << "Feb" << "Mar" << "Apr" << "May" << "Jun";
+            QBarCategoryAxis *axisXstats = new QBarCategoryAxis();
+            axisXstats->append(statsCategories);
+            statsChartBar->addAxis(axisXstats, Qt::AlignBottom);
+            statsLineseries->attachAxis(axisXstats);
+            axisXstats->setRange(QString("Jan"), QString("Jun"));
+            QValueAxis *axisYstats = new QValueAxis();
+            statsChartBar->addAxis(axisYstats, Qt::AlignLeft);
+            statsLineseries->attachAxis(axisYstats);
+
+            statsChartBar->legend()->setVisible(true);
+            statsChartBar->legend()->setAlignment(Qt::AlignBottom);
+
+            statsChartViewBar->setChart(statsChartBar);
+            statsChartViewBar->setRenderHint(QPainter::Antialiasing);
+
+
+
+    });
+
+
+    // Update chart with selected frequency
+    connect(statsComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [statsChartViewBar] (){
+        QLineSeries *statsLineseries = new QLineSeries();
+            statsLineseries->setName("Number of devices tracked");
+            statsLineseries->append(QPoint(0, 4));
+            statsLineseries->append(QPoint(1, 15));
+            statsLineseries->append(QPoint(2, 20));
+            statsLineseries->append(QPoint(3, 4));
+            statsLineseries->append(QPoint(4, 12));
+            statsLineseries->append(QPoint(5, 17));
+
+            // Configure the chart using current time
+            QChart *statsChartBar = new QChart();
+            statsChartBar->addSeries(statsLineseries);
+            statsChartBar->setTitle("Number of devices tracked");
+            statsChartBar->setAnimationOptions(QChart::SeriesAnimations);
+
+            QStringList statsCategories;
+            statsCategories << "Jan" << "Feb" << "Mar" << "Apr" << "May" << "Jun";
+            QBarCategoryAxis *axisXstats = new QBarCategoryAxis();
+            axisXstats->append(statsCategories);
+            statsChartBar->addAxis(axisXstats, Qt::AlignBottom);
+            statsLineseries->attachAxis(axisXstats);
+            axisXstats->setRange(QString("Jan"), QString("Jun"));
+            QValueAxis *axisYstats = new QValueAxis();
+            statsChartBar->addAxis(axisYstats, Qt::AlignLeft);
+            statsLineseries->attachAxis(axisYstats);
+
+            statsChartBar->legend()->setVisible(true);
+            statsChartBar->legend()->setAlignment(Qt::AlignBottom);
+
+            statsChartViewBar->setChart(statsChartBar);
+            statsChartViewBar->setRenderHint(QPainter::Antialiasing);
+
+
+
+    });
+
+    QVBoxLayout *statsLayout = new QVBoxLayout;
+    statsLayout->addWidget(statsEndLabel);
+    statsLayout->addWidget(statsDateEdit);
+    statsLayout->addWidget(statsFormatLabel);
+    statsLayout->addWidget(statsComboBox);
+    statsLayout->addWidget(statsChartViewBar);
+    statsLayout->addWidget(statsLabel);
+    QWidget *statsWidget = new QWidget;
+    statsWidget->setLayout(statsLayout);
+
+
+
+
+    // LOAD CREATED TABS
+
 
 
     auto tw = new QTabWidget (this);
     tw->addTab(graphicsViewScatter, "Map");
-    tw->addTab(chartViewBar, "Stats");
-    tw->addTab(new QWidget, "third");
+    tw->addTab(histWidget, "History");
+    tw->addTab(statsWidget, "Stats");
 
     setCentralWidget(tw);
+
+    connect(tw, QOverload<int>::of(&QTabWidget::currentChanged), this, [graphicsViewScatter] (int i) {
+        if(i==0){
+            graphicsViewScatter->update();
+        }
+
+    });
 
 
 }

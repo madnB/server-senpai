@@ -16,15 +16,16 @@ public:
     MainWindow(QWidget *parent = nullptr);
     QProcess mqtt;
     QTimer* timer;
+    QTimer* mapTimer;
     ~MainWindow();
 
 public slots:
-    void closing();
+    void closing();    
 
 private:
     Triangulation triang;
     void MqttStart();
-    void DB();
+    void DB();    
     Ui::MainWindow *ui;
 };
 #endif // MAINWINDOW_H
