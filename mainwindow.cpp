@@ -54,7 +54,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     db.triang.initTriang(roots);
 
-    int n_sec=1;
+    int n_sec=10;
     this->timer->setInterval(n_sec*1000);
     connect(this->timer, &QTimer::timeout,this, []() {
         Db_original db;
@@ -77,11 +77,17 @@ MainWindow::MainWindow(QWidget *parent)
     QScatterSeries *boardScatter = new QScatterSeries();
     boardScatter->setName("Boards");
     boardScatter->setPointLabelsVisible(false);
-    connect(boardScatter,&QXYSeries::hovered,this,[boardScatter] () {
+    connect(boardScatter,&QXYSeries::hovered,this,[boardScatter] (const QPointF &waste, bool check) {
+        if(check == true){
             boardScatter->setPointLabelsVisible(true);
+        }
+        else {
+            boardScatter->setPointLabelsVisible(false);
+        }
+
     });
     boardScatter->setMarkerShape(QScatterSeries::MarkerShapeRectangle);
-    boardScatter->setMarkerSize(10.0);
+    boardScatter->setMarkerSize(15.0);
 
     *boardScatter<<QPointF(3,4);
 
@@ -98,8 +104,13 @@ MainWindow::MainWindow(QWidget *parent)
     for(vector<schema_triang>::iterator it=vlast.begin(); it!=vlast.end();++it){        
         QScatterSeries *phoneScatter = new QScatterSeries();
         phoneScatter->setPointLabelsVisible(false);
-        connect(phoneScatter,&QXYSeries::hovered,this,[phoneScatter] () {
+        connect(phoneScatter,&QXYSeries::hovered,this,[phoneScatter] (const QPointF &waste, bool check) {
+            if(check == true){
                 phoneScatter->setPointLabelsVisible(true);
+            }
+            else {
+                phoneScatter->setPointLabelsVisible(false);
+            }
         });
         phoneScatter->setMarkerShape(QScatterSeries::MarkerShapeCircle);
         phoneScatter->setMarkerSize(10.0);
@@ -153,8 +164,13 @@ MainWindow::MainWindow(QWidget *parent)
         for(vector<schema_triang>::iterator it=vlast.begin(); it!=vlast.end();++it){
             QScatterSeries *phoneScatter = new QScatterSeries();
             phoneScatter->setPointLabelsVisible(false);
-            connect(phoneScatter,&QXYSeries::hovered,phoneScatter,[phoneScatter] () {
+            connect(phoneScatter,&QXYSeries::hovered,phoneScatter,[phoneScatter] (const QPointF &waste, bool check) {
+                if(check == true){
                     phoneScatter->setPointLabelsVisible(true);
+                }
+                else {
+                    phoneScatter->setPointLabelsVisible(false);
+                }
             });
             phoneScatter->setMarkerShape(QScatterSeries::MarkerShapeCircle);
             phoneScatter->setMarkerSize(10.0);
@@ -321,10 +337,7 @@ MainWindow::MainWindow(QWidget *parent)
     });
 
     QVBoxLayout *histLayout = new QVBoxLayout;
-    //QHBoxLayout *histLayout2 = new QHBoxLayout;
     histLayout->addWidget(histFormatLabel);
-   // histLayout2->addWidget(histDateEdit);
-    //histLayout2->addWidget();
     histLayout->addWidget(histChartViewBar);
     histLayout->addWidget(histLabel);
     QWidget *histWidget = new QWidget;
