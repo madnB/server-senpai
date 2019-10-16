@@ -10,7 +10,6 @@
 #include "statistics.h"
 #include "best_k_mac.h"
 #include "triangulation.h"
-#include "num_ril.h"
 using namespace std;
 
 class Db_original {
